@@ -1,0 +1,114 @@
+{
+  "cases": [
+    {
+      "id": "employee-headphones-replacement",
+      "expected": "approve",
+      "note": "Employee replaces a broken pair of headphones.",
+      "request": {
+        "employee": "Grace Hopper",
+        "role": "employee",
+        "item_requested": "headphones",
+        "reason": "Replacement of my broken headphones."
+      }
+    },
+    {
+      "id": "employee-headphones-first",
+      "expected": "approve",
+      "note": "Employee does not have headphones yet.",
+      "request": {
+        "employee": "Katherine Johnson",
+        "role": "employee",
+        "item_requested": "headphones",
+        "reason": "First pair. I do not have headphones yet."
+      }
+    },
+    {
+      "id": "manager-headphones-replacement",
+      "expected": "approve",
+      "note": "Manager replaces their current headphones.",
+      "request": {
+        "employee": "Alan Turing",
+        "role": "manager",
+        "item_requested": "headphones",
+        "reason": "Replacement of the headphones I have."
+      }
+    },
+    {
+      "id": "director-headphones-spare",
+      "expected": "escalate",
+      "note": "Director already has headphones and wants a spare.",
+      "request": {
+        "employee": "Margaret Hamilton",
+        "role": "director",
+        "item_requested": "headphones",
+        "reason": "Second pair. I want a spare while I keep the current ones."
+      }
+    },
+    {
+      "id": "employee-phone-replacement",
+      "expected": "approve",
+      "note": "Employee replaces a broken phone.",
+      "request": {
+        "employee": "Radia Perlman",
+        "role": "employee",
+        "item_requested": "phone",
+        "reason": "Replacement of my broken phone."
+      }
+    },
+    {
+      "id": "employee-phone-additional",
+      "expected": "escalate",
+      "note": "Employee wants an additional phone.",
+      "request": {
+        "employee": "Tim Berners-Lee",
+        "role": "employee",
+        "item_requested": "phone",
+        "reason": "Additional phone. I want a second one."
+      }
+    },
+    {
+      "id": "manager-phone-first",
+      "expected": "approve",
+      "note": "Manager does not have a company phone yet.",
+      "request": {
+        "employee": "Barbara Liskov",
+        "role": "manager",
+        "item_requested": "phone",
+        "reason": "First company phone. I do not have one yet."
+      }
+    },
+    {
+      "id": "director-phone-second",
+      "expected": "escalate",
+      "note": "Director already has a phone and wants a second.",
+      "request": {
+        "employee": "Donald Knuth",
+        "role": "director",
+        "item_requested": "phone",
+        "reason": "Second phone. I already have one and want another."
+      }
+    },
+    {
+      "id": "manager-laptop-week-overlap",
+      "expected": "escalate",
+      "note": "Manager will keep both laptops for a week, then return the old one.",
+      "request": {
+        "employee": "Ada Lovelace",
+        "role": "manager",
+        "item_requested": "laptop",
+        "reason": "Replacing my current laptop. I will keep both for a week before returning the old one to IT."
+      }
+    },
+    {
+      "id": "employee-laptop",
+      "expected": "escalate",
+      "note": "Employee requests a laptop. The policy says nothing about employees and laptops.",
+      "request": {
+        "employee": "Linus Torvalds",
+        "role": "employee",
+        "item_requested": "laptop",
+        "reason": "I need a laptop for my work."
+      }
+    }
+  ]
+}
