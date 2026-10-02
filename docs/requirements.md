@@ -42,7 +42,7 @@ Classify `reason` in lowercase. Use the first class that matches.
 2. `unclear` when the reason has both a second-item signal and a first-item signal.
 3. `second` when the reason has any second-item signal: `second`, `spare`, `additional`, `another`, `extra`, `already have`.
 4. `first` when the reason has any first-item signal: `first`, `do not have`, `don't have`, `not have one yet`.
-5. `replacement` when the reason has any replacement signal: `replacement`, `replace`, `replacing`, `broken`, `lost`, `stolen`, `worn out`, `stopped working`.
+5. `replacement` when the reason has any replacement signal: `replacement`, `replace`, `replacing`, `broken`, `broke`, `lost`, `stolen`, `worn out`, `stopped working`.
 6. `unclear` when none of the above match.
 
 `week_overlap` wins over `replacement`. A reason that says both "replacing" and "keep both for a week before returning" is `week_overlap`.
