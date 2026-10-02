@@ -51,12 +51,56 @@ def _error_text(result: Any) -> str:
 
 
 @asynccontextmanager
-async def _session():
+async def _session(server_path: Path | None = None):
     parameters = StdioServerParameters(
         command=sys.executable,
-        args=[str(SERVER_PATH)],
+        args=[str(server_path or SERVER_PATH)],
     )
     async with stdio_client(parameters) as streams:
         async with ClientSession(streams[0], streams[1]) as session:
             await session.initialize()
             yield session
+
+
+class MCPClient:
+    """One persistent stdio server session for a whole agent run.
+
+    The TAO loop calls several tools per request; keeping the session open
+    avoids relaunching the server for every call. Tool schemas come back in
+    OpenAI/Ollama function format, ready to pass to the LLM.
+    """
+
+    def __init__(self, server_path: Path | None = None) -> None:
+        self.server_path = server_path or SERVER_PATH
+
+    async def __aenter__(self) -> "MCPClient":
+        self._session_cm = _session(self.server_path)
+        self._session = await self._session_cm.__aenter__()
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        await self._session_cm.__aexit__(*exc_info)
+
+    async def list_tool_schemas(self) -> list[dict[str, Any]]:
+        listed = await self._session.list_tools()
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description or "",
+                    "parameters": tool.inputSchema,
+                },
+            }
+            for tool in listed.tools
+        ]
+
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
+        result = await self._session.call_tool(name, arguments)
+        if getattr(result, "is_error", False):
+            raise RuntimeError(_error_text(result))
+        structured = getattr(result, "structured_content", None)
+        if structured is not None:
+            return structured
+        text = _error_text(result)
+        return json.loads(text) if text else None

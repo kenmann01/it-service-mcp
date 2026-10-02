@@ -1,0 +1,1 @@
+get_employee_info(E001) -> {"employee_id": "E001", "equipment": ["headphones", "laptop"], "found": true, "name": "Grace Hopper", "role": "employee", "tenure_years": 14}
