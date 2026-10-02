@@ -354,6 +354,53 @@ class LoopGuardTests(unittest.TestCase):
         self.assertTrue(any("catalog word" in content for content in observations))
         self.assertEqual(result.decision, "approve")
 
+    def test_unknown_item_reaches_the_server(self) -> None:
+        """An item outside the catalog that the user wrote is decided by the server."""
+        request = "Hi, I'm Grace Hopper (E001). My monitor arm snapped; can I get a new monitor arm?"
+        mcp = FakeMCP(_responses("escalate", "unknown_item"))
+        llm = FakeLLM(
+            [
+                _call("get_employee_info", "Finding the requester.", {"employee_id": "E001"}),
+                _call("get_policy_limits", "Checking what this role may request.", {"role": "employee"}),
+                _call(
+                    "check_request_eligibility",
+                    "Checking whether this employee can get the item.",
+                    {"employee_id": "E001", "item": "monitor arm"},
+                ),
+                _call(
+                    "evaluate_request",
+                    "Applying the policy.",
+                    {
+                        "employee": "Grace Hopper",
+                        "role": "employee",
+                        "item_requested": "monitor arm",
+                        "reason": "My monitor arm snapped",
+                    },
+                ),
+                _call(
+                    "flag_for_human_review",
+                    "This item needs a person.",
+                    {"employee_id": "E001", "request": request, "reason": request},
+                ),
+                LLMResponse(content="Grace, your monitor arm request is with IT. Review R001."),
+                LLMResponse(content="CONFIRMED"),
+            ]
+        )
+
+        result = run_agent(request, llm=llm, mcp=mcp)
+
+        evaluated = [arguments for name, arguments in mcp.calls if name == "evaluate_request"]
+        self.assertEqual(evaluated, [
+            {
+                "employee": "Grace Hopper",
+                "role": "employee",
+                "item_requested": "monitor arm",
+                "reason": request,
+            }
+        ])
+        self.assertEqual(result.decision, "escalate")
+        self.assertEqual(result.rule, "unknown_item")
+
     def test_early_draft_runs_the_open_tool(self) -> None:
         """A reply before the lookup is replaced by that lookup, then the case continues."""
         mcp = FakeMCP(_responses("approve", "headphones_replacement"))

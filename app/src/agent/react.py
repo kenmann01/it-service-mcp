@@ -202,6 +202,15 @@ def _catalog_item(sentence: str, claimed: str) -> str | None:
     return None
 
 
+def _words_in_request(request: str, claimed: str) -> bool:
+    """True when every word of the claimed item appears in the request."""
+    words = claimed.strip().lower().split()
+    if not words:
+        return False
+    text = request.lower()
+    return all(re.search(rf"\b{re.escape(word)}\b", text) for word in words)
+
+
 def _prepare_evaluate(
     arguments: dict[str, Any], request: str, employee: dict[str, Any] | None
 ) -> tuple[dict[str, Any], str | None]:
@@ -209,7 +218,9 @@ def _prepare_evaluate(
 
     reason is the raw sentence, so a count such as 2000 cannot be dropped.
     role comes from the employee lookup when that lookup found the person.
-    item_requested must be a catalog word that appears in the sentence.
+    item_requested must be grounded in the sentence: a catalog word is
+    canonicalized, an item outside the catalog is passed through so the
+    unknown_item control decides it, anything else is refused.
     """
     prepared = dict(arguments)
     prepared["reason"] = request
@@ -220,10 +231,12 @@ def _prepare_evaluate(
     claimed = prepared.get("item_requested")
     claimed_text = claimed if isinstance(claimed, str) else ""
     item = _catalog_item(request, claimed_text)
-    if item is None:
-        return prepared, "item_requested is not a catalog word in the request"
-    prepared["item_requested"] = item
-    return prepared, None
+    if item is not None:
+        prepared["item_requested"] = item
+        return prepared, None
+    if _words_in_request(request, claimed_text):
+        return prepared, None
+    return prepared, "item_requested is not a catalog word in the request"
 
 
 def _build_system_prompt() -> str:
