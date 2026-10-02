@@ -39,11 +39,12 @@ Classify `reason` in lowercase. Use the first class that matches.
    - `keep both` or `both laptops`
    - `week` or `7 days`
    - `return`
-2. `unclear` when the reason has both a second-item signal and a first-item signal.
-3. `second` when the reason has any second-item signal: `second`, `spare`, `additional`, `another`, `extra`, `already have`.
-4. `first` when the reason has any first-item signal: `first`, `do not have`, `don't have`, `not have one yet`.
-5. `replacement` when the reason has any replacement signal: `replacement`, `replace`, `replacing`, `broken`, `broke`, `lost`, `stolen`, `worn out`, `stopped working`.
-6. `unclear` when none of the above match.
+2. `unclear` when the reason states a count greater than one of headphones, phones, laptops, or pairs, such as `200 new headphones`. A span of days, such as `7 days`, is not an item count.
+3. `unclear` when the reason has both a second-item signal and a first-item signal.
+4. `second` when the reason has any second-item signal: `second`, `spare`, `additional`, `another`, `extra`, `already have`.
+5. `first` when the reason has any first-item signal: `first`, `do not have`, `don't have`, `not have one yet`.
+6. `replacement` when the reason has any replacement signal: `replacement`, `replace`, `replacing`, `broken`, `broke`, `lost`, `stolen`, `worn out`, `stopped working`.
+7. `unclear` when none of the above match.
 
 `week_overlap` wins over `replacement`. A reason that says both "replacing" and "keep both for a week before returning" is `week_overlap`.
 

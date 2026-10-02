@@ -13,9 +13,9 @@ The agent pipeline is Planner -> TAO -> Reflector:
 
 ## Policy
 
-Requests are decided by the 16-rule first-match procedure in
-[docs/requirements.md](docs/requirements.md), restated in plain language in
-[docs/policy.md](docs/policy.md). Three outcomes:
+Requests are decided by the control register in
+[docs/requirements.md](docs/requirements.md), published as IT-POL-EQ-001 in
+[docs/policy.md](docs/policy.md). The register is first-applicable. Three effects:
 
 - `approve` when the policy clearly covers the request.
 - `deny` when the policy clearly does not cover it.
@@ -90,7 +90,12 @@ uv run python app/scripts/agent.py "Hi, I'm Grace Hopper (E001). My headphones b
 
 # the whole 24-request pool, traces saved to demo/traces/
 uv run python app/scripts/run_pool.py
+
+# one-page desk: file a request, watch the rail, read the trace
+uv run python app/scripts/web.py
 ```
+
+The desk listens on `http://127.0.0.1:8765`. It runs the same agent as the CLI and streams each trace step to the page.
 
 ## Configuration
 

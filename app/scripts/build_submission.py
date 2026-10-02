@@ -109,7 +109,7 @@ def reflection_evidence_block() -> str:
     """Show drafts the reflector rewrote, with the corrected text."""
     parts = []
     for key, note in (
-        ("deny", "Draft was a meta-note; the Reflector rewrote it into a real refusal:"),
+        ("approve", "The Reflector confirmed the draft against the tool observations:"),
         ("week-overlap", "Draft omitted the escalation reason; the Reflector added it:"),
     ):
         text = read(DEMO_FILE[key])

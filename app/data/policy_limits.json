@@ -10,7 +10,7 @@
     },
     "laptop": {
       "eligible": false,
-      "period": "Not covered. A laptop request is escalated."
+      "period": "Not issued to employees. A laptop request is denied."
     }
   },
   "manager": {
@@ -24,7 +24,7 @@
     },
     "laptop": {
       "eligible": false,
-      "period": "Not covered. A laptop request is escalated."
+      "period": "Not issued. Holding both laptops for a week and then returning one is an exception. Every other laptop request is denied."
     }
   },
   "director": {
@@ -38,7 +38,7 @@
     },
     "laptop": {
       "eligible": false,
-      "period": "Not covered. A laptop request is escalated."
+      "period": "Not issued. Holding both laptops for a week and then returning one is an exception. Every other laptop request is denied."
     }
   }
 }

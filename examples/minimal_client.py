@@ -15,6 +15,7 @@ SERVER = Path(__file__).resolve().parent / "minimal_server.py"
 
 
 async def main() -> None:
+    """Connect to the minimal server, list its tools, and call ping."""
     parameters = StdioServerParameters(command=sys.executable, args=[str(SERVER)])
     print(f"Connecting to {SERVER.name} over stdio...")
     async with stdio_client(parameters) as streams:
