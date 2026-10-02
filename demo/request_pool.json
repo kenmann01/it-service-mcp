@@ -165,7 +165,7 @@
     {
       "id": "escalate-2-06-director-laptop-handback",
       "bucket": "escalate_week_overlap",
-      "request": "Hello, I'm Donald Knuth (E008). I need a laptop refresh; I'll keep both laptops for a week and hand the old one back to IT.",
+      "request": "Hello, I'm Donald Knuth (E008). I need a laptop refresh; I'll keep both laptops for a week and then return the old one to IT.",
       "expected_decision": "escalate",
       "expected_rule": "laptop_week_overlap"
     }

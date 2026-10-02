@@ -8,9 +8,9 @@
 [OBSERVATION] {"decision": "approve", "rule": "headphones_replacement"}
 [ROUTE] approve (headphones_replacement) -> draft the approval, naming the rule
 
-[DRAFT] Your request for replacement headphones has been approved under rule "headphones_replacement", Grace Hopper. The replacement will be processed shortly. Thank you for your patience.
-[REFLECTION] Draft confirmed against tool observations
+[DRAFT] Your request for a replacement headphones has been approved under rule headphones_replacement, Grace Hopper. The replacement will be processed shortly. Let me know if you need anything else.
+[REFLECTION] Draft corrected: Your request for a replacement headphones has been approved under rule headphones_replacement. The replacement will be processed shortly. Let me know if you need anything else.
 
 === FINAL RESPONSE ===
-Your request for replacement headphones has been approved under rule "headphones_replacement", Grace Hopper. The replacement will be processed shortly. Thank you for your patience.
+Your request for a replacement headphones has been approved under rule headphones_replacement. The replacement will be processed shortly. Let me know if you need anything else.
 === decision=approve rule=headphones_replacement ===

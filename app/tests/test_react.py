@@ -175,6 +175,27 @@ class LoopGuardTests(unittest.TestCase):
         self.assertEqual(result.decision, "approve")
         self.assertTrue(any(step.type == "error" for step in result.trace.steps))
 
+    def test_draft_without_policy_check_is_bounced(self) -> None:
+        mcp = FakeMCP(_responses("approve", "headphones_replacement"))
+        llm = FakeLLM(
+            [
+                LLMResponse(content="I would approve this."),
+                _call("evaluate_request", "Checking the policy first.", {}),
+                LLMResponse(content="Grace, your replacement headphones are approved."),
+                LLMResponse(content="CONFIRMED"),
+            ]
+        )
+
+        result = run_agent(APPROVE_REQUEST, llm=llm, mcp=mcp)
+
+        self.assertEqual(result.decision, "approve")
+        self.assertTrue(
+            any("bouncing" in step.content for step in result.trace.steps)
+        )
+        self.assertEqual(
+            [name for name, _ in mcp.calls][0], "evaluate_request"
+        )
+
 
 class ReflectionSeamTests(unittest.TestCase):
     def test_reflector_can_correct_the_draft(self) -> None:
@@ -182,6 +203,7 @@ class ReflectionSeamTests(unittest.TestCase):
         llm = FakeLLM(
             [
                 _call("get_employee_info", "Finding the requester.", {"employee_id": "E001"}),
+                _call("evaluate_request", "Applying the policy.", {}),
                 LLMResponse(content="Draft v1."),
                 LLMResponse(content="CORRECTED: Grace, your replacement headphones are approved under rule headphones_replacement."),
             ]

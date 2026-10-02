@@ -62,10 +62,12 @@ PLAN
 3. Route by the decision evaluate_request returned: {json.dumps(_ROUTES)}
 4. Write the final draft and nothing else. The draft is the message that goes to the requester: an approval says what is granted and cites the rule; a denial says it is refused and cites the rule and the policy reason; a handoff names the review id and why. Keep it under six sentences and address the requester by name. Never mention tools, iterations, routing, or drafting inside the draft.
 
-Before every tool call, write one short sentence explaining why. Never guess: an
-ambiguous or out-of-scope request must reach a decision through evaluate_request,
-and only an escalate decision goes to flag_for_human_review. Do not invent policy
-rules, and do not promise equipment the tools did not approve."""
+Before every tool call, write one short sentence explaining why. EVERY request is
+decided by evaluate_request: even when the item or role looks unrelated to IT
+equipment, extract the four fields, call evaluate_request, and route by its
+decision. Only an escalate decision goes to flag_for_human_review. Never decide
+policy yourself, never invent policy rules, and never answer a request without
+calling evaluate_request first."""
 
 
 SYSTEM_PROMPT = _build_system_prompt()
@@ -120,6 +122,7 @@ async def _react_loop(
     decision: str | None = None
     rule: str | None = None
     review_id: str | None = None
+    policy_checked = False
 
     for iteration in range(1, max_iterations + 1):
         response = llm.chat(messages, tools=tools)
@@ -138,6 +141,7 @@ async def _react_loop(
             trace.add("observation", json.dumps(observation, sort_keys=True, default=str))
 
             if action.name == "evaluate_request" and isinstance(observation, dict):
+                policy_checked = True
                 decision = observation.get("decision")
                 rule = observation.get("rule")
                 if decision:
@@ -160,6 +164,19 @@ async def _react_loop(
         draft = (response.content or "").strip()
         if not draft:
             trace.add("error", f"Iteration {iteration}: empty model reply; retrying.")
+            continue
+
+        if not policy_checked:
+            # Guard: a draft may not exist before the decision tool has run.
+            trace.add("error", "Draft attempted before evaluate_request ran; bouncing back.")
+            messages.append({"role": "assistant", "content": draft})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": "Before responding, call evaluate_request with the four "
+                    "request fields and route by its decision. Call the tool now.",
+                }
+            )
             continue
 
         trace.add("draft", draft)
