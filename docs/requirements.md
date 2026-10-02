@@ -1,6 +1,6 @@
 # Equipment request policy
 
-This document is the only source of truth for an equipment request. Decide each request by the procedure below. Do not add rules about monitors, refresh cycles, years between replacements, cost, or inventory. The only decisions are `approve` and `escalate`.
+This document is the only source of truth for an equipment request. Decide each request by the procedure below. Do not add rules about monitors, refresh cycles, years between replacements, cost, or inventory. The decisions are `approve`, `deny`, and `escalate`. `approve` when the policy clearly covers the request. `deny` when the policy clearly does not cover it. `escalate` when the request is ambiguous or missing information, so a human decides.
 
 ## Request
 
@@ -54,20 +54,21 @@ Apply the first matching rule. Stop there.
 1. Any required field is blank. Decision: `escalate`. Rule: `blank_field`.
 2. Role is not `employee`, `manager`, or `director`. Decision: `escalate`. Rule: `unknown_role`.
 3. Item is not `headphones`, `phone`, or `laptop`. Decision: `escalate`. Rule: `unknown_item`.
-4. Item is `laptop` and role is `employee`. Decision: `escalate`. Rule: `employee_laptop`. The policy does not cover employee laptops, whatever the reason says.
-5. Item is `laptop`, role is `manager` or `director`, and the reason class is `week_overlap`. Decision: `escalate`. Rule: `laptop_week_overlap`. Keeping both laptops for a week and then returning the old one to IT is not approved.
-6. Item is `laptop` and role is `manager` or `director`, for every other reason class. Decision: `escalate`. Rule: `laptop_not_covered`. No laptop request is approved.
+4. Item is `laptop` and role is `employee`. Decision: `deny`. Rule: `employee_laptop`. The policy does not cover employee laptops, whatever the reason says.
+5. Item is `laptop`, role is `manager` or `director`, and the reason class is `week_overlap`. Decision: `escalate`. Rule: `laptop_week_overlap`. Keeping both laptops for a week and then returning the old one to IT is a human decision.
+6. Item is `laptop` and role is `manager` or `director`, for every other reason class. Decision: `deny`. Rule: `laptop_not_covered`. No laptop request is approved.
 7. Item is `headphones`, role is `employee`, `manager`, or `director`, and the reason class is `replacement`. Decision: `approve`. Rule: `headphones_replacement`.
 8. Item is `headphones`, role is `employee`, `manager`, or `director`, and the reason class is `first`. Decision: `approve`. Rule: `headphones_first`.
-9. Item is `headphones` and the reason class is `second`. Decision: `escalate`. Rule: `headphones_second`. A spare pair while they keep the current ones is not approved.
+9. Item is `headphones` and the reason class is `second`. Decision: `deny`. Rule: `headphones_second`. A spare pair while they keep the current ones is not approved.
 10. Item is `phone`, role is `employee`, and the reason class is `replacement`. Decision: `approve`. Rule: `employee_phone_replacement`.
-11. Item is `phone`, role is `employee`, and the reason class is `first` or `second`. Decision: `escalate`. Rule: `employee_phone_not_replacement`. An employee is approved only for a phone replacement.
-12. Item is `phone`, role is `manager` or `director`, and the reason class is `replacement`. Decision: `approve`. Rule: `manager_phone_replacement`.
-13. Item is `phone`, role is `manager` or `director`, and the reason class is `first`. Decision: `approve`. Rule: `manager_phone_first`.
-14. Item is `phone`, role is `manager` or `director`, and the reason class is `second`. Decision: `escalate`. Rule: `manager_phone_second`.
-15. Item is `headphones` or `phone` and the reason class is `unclear` or `week_overlap`. Decision: `escalate`. Rule: `unclear_reason`.
+11. Item is `phone`, role is `employee`, and the reason class is `first`. Decision: `escalate`. Rule: `employee_phone_first`. An employee is approved only for a phone replacement; whether to grant a first company phone is a human decision.
+12. Item is `phone`, role is `employee`, and the reason class is `second`. Decision: `deny`. Rule: `employee_phone_second`. An extra phone for an employee is not approved.
+13. Item is `phone`, role is `manager` or `director`, and the reason class is `replacement`. Decision: `approve`. Rule: `manager_phone_replacement`.
+14. Item is `phone`, role is `manager` or `director`, and the reason class is `first`. Decision: `approve`. Rule: `manager_phone_first`.
+15. Item is `phone`, role is `manager` or `director`, and the reason class is `second`. Decision: `deny`. Rule: `manager_phone_second`. A second phone while they already have one is not approved.
+16. Item is `headphones` or `phone` and the reason class is `unclear` or `week_overlap`. Decision: `escalate`. Rule: `unclear_reason`.
 
-There is no later step. Steps 1 through 15 cover every request.
+There is no later step. Steps 1 through 16 cover every request.
 
 ## Result
 
@@ -80,4 +81,4 @@ Return only this object:
 }
 ```
 
-`decision` is `approve` or `escalate`. `rule` is the rule id from the step that matched.
+`decision` is `approve`, `deny`, or `escalate`. `rule` is the rule id from the step that matched.

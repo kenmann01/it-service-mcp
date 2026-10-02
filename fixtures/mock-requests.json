@@ -35,7 +35,7 @@
     },
     {
       "id": "director-headphones-spare",
-      "expected": "escalate",
+      "expected": "deny",
       "note": "Director already has headphones and wants a spare.",
       "request": {
         "employee": "Margaret Hamilton",
@@ -57,7 +57,7 @@
     },
     {
       "id": "employee-phone-additional",
-      "expected": "escalate",
+      "expected": "deny",
       "note": "Employee wants an additional phone.",
       "request": {
         "employee": "Tim Berners-Lee",
@@ -79,7 +79,7 @@
     },
     {
       "id": "director-phone-second",
-      "expected": "escalate",
+      "expected": "deny",
       "note": "Director already has a phone and wants a second.",
       "request": {
         "employee": "Donald Knuth",
@@ -101,7 +101,7 @@
     },
     {
       "id": "employee-laptop",
-      "expected": "escalate",
+      "expected": "deny",
       "note": "Employee requests a laptop. The policy says nothing about employees and laptops.",
       "request": {
         "employee": "Linus Torvalds",
