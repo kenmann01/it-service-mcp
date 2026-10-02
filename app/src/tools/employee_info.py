@@ -6,6 +6,8 @@ from tools.data_store import load_employees
 
 
 class EmployeeInfo(TypedDict):
+    """Role, tenure, and equipment on file, or a found=false miss."""
+
     found: bool
     employee_id: str
     name: NotRequired[str]

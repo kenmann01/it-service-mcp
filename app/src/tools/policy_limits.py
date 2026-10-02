@@ -6,11 +6,15 @@ from tools.data_store import load_policy_limits
 
 
 class ItemLimit(TypedDict):
+    """Eligibility flag and coverage period for one item."""
+
     eligible: bool
     period: str
 
 
 class PolicyLimits(TypedDict):
+    """What a role may request, or a known=false miss for an unknown role."""
+
     role: str
     known: bool
     eligible_for: NotRequired[list[str]]

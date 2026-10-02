@@ -30,6 +30,7 @@ _ROUTES = {
 
 
 def _roster() -> str:
+    """Format the employee roster the planner uses to resolve names to ids."""
     lines = []
     for info in load_employees():
         lines.append(f"- {info['employee_id']}: {info['name']} ({info['role']})")
@@ -37,6 +38,7 @@ def _roster() -> str:
 
 
 def _build_system_prompt() -> str:
+    """Build the planner prompt: fields, roster, tools, and the route rules."""
     return f"""You are the IT equipment request agent for the Internal IT Service MCP server.
 
 REQUEST
@@ -80,6 +82,8 @@ FALLBACK_RESPONSE = (
 
 @dataclass
 class AgentResult:
+    """Outcome of one request: draft, trace, and the routed decision."""
+
     request: str
     final_response: str
     trace: Trace
@@ -106,6 +110,7 @@ def run_agent(
 
 
 async def _react_loop_live(request: str, llm: Any, max_iterations: int) -> AgentResult:
+    """Open a live MCP session and run the TAO loop against it."""
     async with MCPClient() as server:
         return await _react_loop(request, llm, server, max_iterations)
 
@@ -113,6 +118,7 @@ async def _react_loop_live(request: str, llm: Any, max_iterations: int) -> Agent
 async def _react_loop(
     request: str, llm: Any, mcp: Any, max_iterations: int
 ) -> AgentResult:
+    """Thought/action/observation loop, then the reflector, for one request."""
     trace = Trace()
     tools = await mcp.list_tool_schemas()
     messages: list[dict[str, Any]] = [

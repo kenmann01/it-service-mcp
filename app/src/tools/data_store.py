@@ -10,10 +10,12 @@ DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 @lru_cache(maxsize=1)
 def load_employees() -> tuple[dict[str, Any], ...]:
+    """Load the synthetic employee roster from data/employees.json."""
     payload = json.loads((DATA_DIR / "employees.json").read_text(encoding="utf-8"))
     return tuple(payload["employees"])
 
 
 @lru_cache(maxsize=1)
 def load_policy_limits() -> dict[str, Any]:
+    """Load role item limits from data/policy_limits.json."""
     return json.loads((DATA_DIR / "policy_limits.json").read_text(encoding="utf-8"))

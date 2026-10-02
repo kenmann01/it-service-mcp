@@ -1,3 +1,5 @@
+"""MCP server for the Internal IT Service: registers the five request tools."""
+
 from mcp.server import MCPServer
 from mcp_types import ToolAnnotations
 

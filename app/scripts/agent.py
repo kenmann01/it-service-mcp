@@ -16,6 +16,7 @@ from agent.react import run_agent
 
 
 def main() -> None:
+    """Parse one request and print the agent's decision and draft."""
     parser = argparse.ArgumentParser(
         description="IT equipment request agent (Planner -> TAO -> Reflector)"
     )

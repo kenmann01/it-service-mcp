@@ -24,6 +24,7 @@ from agent.react import run_agent
 
 
 def main() -> None:
+    """Run the request pool and print how each case compared to its expected decision."""
     parser = argparse.ArgumentParser(description="Run the agent over the request pool")
     parser.add_argument("--pool", default=str(ROOT / "demo" / "request_pool.json"))
     parser.add_argument("--out", default=str(ROOT / "demo" / "traces"))

@@ -5,14 +5,32 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import httpx
 
-DEFAULT_HOST = "http://localhost:11434"
+# Host Ollama, reachable from inside Docker. Do not pull models in the container.
+DEFAULT_HOST = "http://host.docker.internal:11434"
 DEFAULT_MODEL = "qwen3:8b"
 
 _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _dotenv_value(name: str) -> str | None:
+    """Read one key from the repo `.env`. Process env still wins in `from_env`."""
+    env_path = _REPO_ROOT / ".env"
+    if not env_path.is_file():
+        return None
+    for raw in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() == name:
+            return value.strip().strip('"').strip("'")
+    return None
 
 
 def strip_think(text: str) -> str:
@@ -25,11 +43,14 @@ def strip_think(text: str) -> str:
 
 @dataclass
 class ToolCall:
+    """One tool call the model asked the agent to make."""
+
     id: str
     name: str
     arguments: dict[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
+        """Return this call in OpenAI/Ollama tool_calls shape."""
         return {
             "id": self.id,
             "type": "function",
@@ -39,11 +60,14 @@ class ToolCall:
 
 @dataclass
 class LLMResponse:
+    """Parsed chat reply: assistant text and at most one tool call."""
+
     content: str | None
     tool_call: ToolCall | None = None
 
     @property
     def has_tool_call(self) -> bool:
+        """True when the model asked for a tool."""
         return self.tool_call is not None
 
 
@@ -59,6 +83,7 @@ class OllamaClient:
         think: bool = False,
         keep_alive: str = "30m",
     ) -> None:
+        """Bind the host, model, and chat options for one client."""
         self.host = host.rstrip("/")
         self.model = model
         self.temperature = temperature
@@ -68,14 +93,16 @@ class OllamaClient:
 
     @classmethod
     def from_env(cls) -> "OllamaClient":
+        """Build a client from the process environment, then `.env`, then defaults."""
         return cls(
-            host=os.environ.get("OLLAMA_HOST", DEFAULT_HOST),
-            model=os.environ.get("OLLAMA_MODEL", DEFAULT_MODEL),
+            host=os.environ.get("OLLAMA_HOST") or _dotenv_value("OLLAMA_HOST") or DEFAULT_HOST,
+            model=os.environ.get("OLLAMA_MODEL") or _dotenv_value("OLLAMA_MODEL") or DEFAULT_MODEL,
         )
 
     def chat(
         self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
     ) -> LLMResponse:
+        """POST one non-streaming /api/chat turn and parse the reply."""
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": messages,

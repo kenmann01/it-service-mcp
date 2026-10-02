@@ -24,12 +24,14 @@ def call_tool(name: str, arguments: dict[str, Any]) -> Any:
 
 
 async def _list_tools() -> list[str]:
+    """Open a session and return the tool names it advertises."""
     async with _session() as session:
         listed = await session.list_tools()
         return [tool.name for tool in listed.tools]
 
 
 async def _call_tool(name: str, arguments: dict[str, Any]) -> Any:
+    """Open a session, call one tool, and return structured content or JSON."""
     async with _session() as session:
         result = await session.call_tool(name, arguments)
         if getattr(result, "is_error", False):
@@ -41,6 +43,7 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> Any:
 
 
 def _error_text(result: Any) -> str:
+    """Join text blocks from an MCP tool result."""
     blocks = getattr(result, "content", None) or []
     parts: list[str] = []
     for block in blocks:
@@ -52,6 +55,7 @@ def _error_text(result: Any) -> str:
 
 @asynccontextmanager
 async def _session(server_path: Path | None = None):
+    """Start the IT server over stdio and yield an initialized client session."""
     parameters = StdioServerParameters(
         command=sys.executable,
         args=[str(server_path or SERVER_PATH)],
@@ -71,17 +75,21 @@ class MCPClient:
     """
 
     def __init__(self, server_path: Path | None = None) -> None:
+        """Remember which server script this client will launch."""
         self.server_path = server_path or SERVER_PATH
 
     async def __aenter__(self) -> "MCPClient":
+        """Start the server and keep its session for the agent run."""
         self._session_cm = _session(self.server_path)
         self._session = await self._session_cm.__aenter__()
         return self
 
     async def __aexit__(self, *exc_info: object) -> None:
+        """Close the server session."""
         await self._session_cm.__aexit__(*exc_info)
 
     async def list_tool_schemas(self) -> list[dict[str, Any]]:
+        """Return tool schemas in OpenAI/Ollama function format."""
         listed = await self._session.list_tools()
         return [
             {
@@ -96,6 +104,7 @@ class MCPClient:
         ]
 
     async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
+        """Call one tool on the open session and return its JSON result."""
         result = await self._session.call_tool(name, arguments)
         if getattr(result, "is_error", False):
             raise RuntimeError(_error_text(result))

@@ -28,6 +28,8 @@ _REPLACEMENT_SIGNALS = (
 
 
 class Decision(TypedDict):
+    """The decision and rule id returned by the 16-rule procedure."""
+
     decision: str
     rule: str
 
@@ -54,6 +56,7 @@ def classify_reason(reason: str) -> str:
 
 
 def _blank(*fields: str) -> bool:
+    """True when any field is missing or only whitespace."""
     return any(not str(field).strip() for field in fields)
 
 

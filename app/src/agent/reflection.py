@@ -29,6 +29,8 @@ If the draft needs fixing, reply exactly: CORRECTED: <the revised draft>
 
 @dataclass
 class ReflectionResult:
+    """Whether the reflector kept the draft and the text that should be sent."""
+
     confirmed: bool
     final_draft: str
     original: str

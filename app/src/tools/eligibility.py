@@ -7,6 +7,8 @@ from tools.policy_limits import get_policy_limits
 
 
 class Eligibility(TypedDict):
+    """Whether one employee may request one item under policy."""
+
     employee_id: str
     item: str
     eligible: bool

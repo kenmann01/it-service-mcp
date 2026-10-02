@@ -23,10 +23,12 @@ KEYWORDS = {
 
 
 def read(rel: str) -> str:
+    """Read a repo-relative file and drop trailing whitespace."""
     return (ROOT / rel).read_text(encoding="utf-8").rstrip()
 
 
 def highlight_python(code: str) -> str:
+    """Wrap Python keywords, strings, and comments in highlight spans."""
     out = []
     for line in code.splitlines():
         escaped = html.escape(line, quote=False)
@@ -45,23 +47,28 @@ def highlight_python(code: str) -> str:
 
 
 def code_block(source: str, lang: str) -> str:
+    """Render source as a highlighted or escaped code block."""
     body = highlight_python(source) if lang == "py" else html.escape(source)
     return f'<pre class="code">{body}</pre>'
 
 
 def term_block(source: str) -> str:
+    """Render captured terminal output."""
     return f'<pre class="term">{html.escape(source)}</pre>'
 
 
 def doc_block(source: str) -> str:
+    """Render a Markdown document as preformatted text."""
     return f'<pre class="doc">{html.escape(source)}</pre>'
 
 
 def file_label(rel: str) -> str:
+    """Render the repo-relative path shown above a block."""
     return f'<div class="file">{html.escape(rel)}</div>'
 
 
 def item(kind: str, rel: str) -> str:
+    """Load one file and render it as code, a document, or terminal output."""
     text = read(rel)
     lang = rel.rsplit(".", 1)[-1]
     label = file_label(rel)
@@ -73,6 +80,7 @@ def item(kind: str, rel: str) -> str:
 
 
 def section(num: int, title: str, body: str) -> str:
+    """Wrap one numbered deliverable section."""
     return f"<section><h2>{num}. {html.escape(title)}</h2>{body}</section>"
 
 
@@ -91,12 +99,14 @@ DEMO_REQUEST = {
 
 
 def final_response_block(key: str) -> str:
+    """Extract the final response from one captured demo trace."""
     text = read(DEMO_FILE[key])
     tail = text.split("=== FINAL RESPONSE ===", 1)[1].strip()
     return term_block(tail)
 
 
 def reflection_evidence_block() -> str:
+    """Show drafts the reflector rewrote, with the corrected text."""
     parts = []
     for key, note in (
         ("deny", "Draft was a meta-note; the Reflector rewrote it into a real refusal:"),
@@ -134,6 +144,7 @@ pre.code .c { color: #6e7781; font-style: italic; }
 
 
 def build_html() -> str:
+    """Assemble the nine deliverable sections into one HTML document."""
     p = [f"<html><head><meta charset='utf-8'><style>{CSS}</style></head><body>"]
 
     p.append(
@@ -217,6 +228,7 @@ def build_html() -> str:
 
 
 def main() -> None:
+    """Write submission.html and print it to submission.pdf."""
     html_path = ROOT / "submission.html"
     html_path.write_text(build_html(), encoding="utf-8")
 

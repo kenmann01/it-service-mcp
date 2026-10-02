@@ -11,6 +11,7 @@ from mcp_client import call_tool
 
 
 def main() -> None:
+    """Call the named tool with JSON arguments and print the result."""
     if len(sys.argv) < 2:
         raise SystemExit("usage: call_tool.py <tool-name> '<json-arguments>'")
     name = sys.argv[1]
