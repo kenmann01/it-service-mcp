@@ -1,0 +1,173 @@
+{
+  "description": "24 natural-language requests for the agent, 6 per bucket: clear approve, clear deny, and two different escalation reasons (ambiguous/missing info, keep-both-for-a-week handoffs). Decision expectations follow docs/requirements.md; expected_rule is informative and not asserted.",
+  "cases": [
+    {
+      "id": "approve-01-headphones-replacement",
+      "bucket": "clear_approve",
+      "request": "Hi, I'm Grace Hopper (E001). My headphones broke, so I need a replacement.",
+      "expected_decision": "approve",
+      "expected_rule": "headphones_replacement"
+    },
+    {
+      "id": "approve-02-headphones-first",
+      "bucket": "clear_approve",
+      "request": "Hello, I'm Adele Goldberg (E011). This is my first pair of headphones; I do not have one yet.",
+      "expected_decision": "approve",
+      "expected_rule": "headphones_first"
+    },
+    {
+      "id": "approve-03-employee-phone-replacement",
+      "bucket": "clear_approve",
+      "request": "Hi, I'm Radia Perlman (E005). My company phone stopped working after the drop. Can I get a replacement?",
+      "expected_decision": "approve",
+      "expected_rule": "employee_phone_replacement"
+    },
+    {
+      "id": "approve-04-manager-headphones-replacement",
+      "bucket": "clear_approve",
+      "request": "Hi, I'm Alan Turing (E003). My headphones are worn out; I'd like a replacement pair.",
+      "expected_decision": "approve",
+      "expected_rule": "headphones_replacement"
+    },
+    {
+      "id": "approve-05-manager-phone-first",
+      "bucket": "clear_approve",
+      "request": "Hello, I'm Barbara Liskov (E007). I don't have a company phone yet and would like my first one.",
+      "expected_decision": "approve",
+      "expected_rule": "manager_phone_first"
+    },
+    {
+      "id": "approve-06-director-phone-replacement",
+      "bucket": "clear_approve",
+      "request": "Hi, I'm Margaret Hamilton (E004). My phone was stolen and I need a replacement.",
+      "expected_decision": "approve",
+      "expected_rule": "manager_phone_replacement"
+    },
+    {
+      "id": "deny-01-employee-laptop",
+      "bucket": "clear_deny",
+      "request": "Hi, I'm Linus Torvalds (E010). I need a laptop for my work.",
+      "expected_decision": "deny",
+      "expected_rule": "employee_laptop"
+    },
+    {
+      "id": "deny-02-employee-phone-second",
+      "bucket": "clear_deny",
+      "request": "Hello, I'm Katherine Johnson (E002). I already have a work phone but want an additional one for travel.",
+      "expected_decision": "deny",
+      "expected_rule": "employee_phone_second"
+    },
+    {
+      "id": "deny-03-headphones-spare",
+      "bucket": "clear_deny",
+      "request": "Hi, I'm Margaret Hamilton (E004). I want a second pair of headphones as a spare while I keep my current ones.",
+      "expected_decision": "deny",
+      "expected_rule": "headphones_second"
+    },
+    {
+      "id": "deny-04-director-phone-second",
+      "bucket": "clear_deny",
+      "request": "Hello, I'm Donald Knuth (E008). I'd like another phone; I already have one.",
+      "expected_decision": "deny",
+      "expected_rule": "manager_phone_second"
+    },
+    {
+      "id": "deny-05-manager-laptop",
+      "bucket": "clear_deny",
+      "request": "Hi, I'm Edsger Dijkstra (E012). My laptop is slow; I need a new one.",
+      "expected_decision": "deny",
+      "expected_rule": "laptop_not_covered"
+    },
+    {
+      "id": "deny-06-headphones-extra",
+      "bucket": "clear_deny",
+      "request": "Hello, I'm Frances Allen (E013). Could I get an extra pair of headphones to keep at home? I already have my desk pair.",
+      "expected_decision": "deny",
+      "expected_rule": "headphones_second"
+    },
+    {
+      "id": "escalate-1-01-unknown-role",
+      "bucket": "escalate_ambiguous",
+      "request": "Hi, I'm Mani. I'd like a vanilla latte, protein goals.",
+      "expected_decision": "escalate",
+      "expected_rule": "unknown_role"
+    },
+    {
+      "id": "escalate-1-02-blank-reason",
+      "bucket": "escalate_ambiguous",
+      "request": "Hi, I'm Katherine Johnson (E002). I'd like to request headphones.",
+      "expected_decision": "escalate",
+      "expected_rule": "blank_field"
+    },
+    {
+      "id": "escalate-1-03-unclear-contradiction",
+      "bucket": "escalate_ambiguous",
+      "request": "Hi, I'm Radia Perlman (E005). I need a second phone since I don't have one right now.",
+      "expected_decision": "escalate",
+      "expected_rule": "unclear_reason"
+    },
+    {
+      "id": "escalate-1-04-employee-phone-first",
+      "bucket": "escalate_ambiguous",
+      "request": "Hello, I'm Tim Berners-Lee (E006). I don't have a company phone yet; could I get my first one?",
+      "expected_decision": "escalate",
+      "expected_rule": "employee_phone_first"
+    },
+    {
+      "id": "escalate-1-05-unknown-item",
+      "bucket": "escalate_ambiguous",
+      "request": "Hi, I'm Grace Hopper (E001). My monitor arm snapped; can I get a new monitor arm?",
+      "expected_decision": "escalate",
+      "expected_rule": "unknown_item"
+    },
+    {
+      "id": "escalate-1-06-no-signal",
+      "bucket": "escalate_ambiguous",
+      "request": "Hello, I'm Adele Goldberg (E011). I just feel like I need new headphones.",
+      "expected_decision": "escalate",
+      "expected_rule": "unclear_reason"
+    },
+    {
+      "id": "escalate-2-01-manager-laptop-week-overlap",
+      "bucket": "escalate_week_overlap",
+      "request": "Hi, I'm Ada Lovelace (E009). I'm replacing my laptop and will keep both for a week before returning the old one to IT.",
+      "expected_decision": "escalate",
+      "expected_rule": "laptop_week_overlap"
+    },
+    {
+      "id": "escalate-2-02-manager-laptop-7-days",
+      "bucket": "escalate_week_overlap",
+      "request": "Hello, I'm Edsger Dijkstra (E012). New laptop please; I'll keep both laptops for 7 days, then return the old one.",
+      "expected_decision": "escalate",
+      "expected_rule": "laptop_week_overlap"
+    },
+    {
+      "id": "escalate-2-03-director-laptop-week-overlap",
+      "bucket": "escalate_week_overlap",
+      "request": "Hi, I'm Margaret Hamilton (E004). Replacing my laptop; I'll keep both for a week and return the old one to IT after migration.",
+      "expected_decision": "escalate",
+      "expected_rule": "laptop_week_overlap"
+    },
+    {
+      "id": "escalate-2-04-manager-phone-week-overlap",
+      "bucket": "escalate_week_overlap",
+      "request": "Hello, I'm Barbara Liskov (E007). My phone needs replacing; I'd like to keep both phones for a week before I return the old one.",
+      "expected_decision": "escalate",
+      "expected_rule": "unclear_reason"
+    },
+    {
+      "id": "escalate-2-05-headphones-week-overlap",
+      "bucket": "escalate_week_overlap",
+      "request": "Hi, I'm Alan Turing (E003). I'd like a replacement for my headphones but want to keep both pairs for a week, then return the old pair.",
+      "expected_decision": "escalate",
+      "expected_rule": "unclear_reason"
+    },
+    {
+      "id": "escalate-2-06-director-laptop-handback",
+      "bucket": "escalate_week_overlap",
+      "request": "Hello, I'm Donald Knuth (E008). I need a laptop refresh; I'll keep both laptops for a week and hand the old one back to IT.",
+      "expected_decision": "escalate",
+      "expected_rule": "laptop_week_overlap"
+    }
+  ]
+}
