@@ -205,11 +205,7 @@ def build_html() -> str:
 
     # 2 minimal server + client
     body2 = (
-        '<div class="note">The simplest possible server (one trivial tool), then a client that connects, lists tools, and calls it. Captured terminal output below the sources.</div>'
-        + item("code", "examples/minimal_server.py")
-        + item("code", "examples/minimal_client.py")
-        + item("term", "demo/outputs/minimal-server.txt")
-        + '<div class="note">The code below is the repository as it existed in the first two commits, before the agent was built: the basic server skeleton first, then the four tools as plain functions over self-generated mock data, their unit tests, and the client used to confirm connectivity.</div>'
+        '<div class="note">Built in order, in the repo\'s first two commits: the basic server skeleton first (the SDK installs, the server starts), then the four tools as plain functions over self-generated mock data, their unit tests, and the MCP client used to confirm connectivity. All of it existed before the agent.</div>'
         + committed("app/src/server.py", COMMIT_SETUP)
         + committed("app/src/tools/data_store.py", COMMIT_TOOLS)
         + committed("app/data/employees.json", COMMIT_TOOLS)
@@ -221,6 +217,10 @@ def build_html() -> str:
         + committed("app/tests/test_tools.py", COMMIT_TOOLS)
         + committed("app/src/mcp_client.py", COMMIT_TOOLS)
         + committed("app/scripts/call_tool.py", COMMIT_TOOLS)
+        + '<div class="note">The step-3 plumbing proof: one trivial tool on a minimal server, a client that connects, lists tools, and calls it, with the captured terminal run.</div>'
+        + item("code", "examples/minimal_server.py")
+        + item("code", "examples/minimal_client.py")
+        + item("term", "demo/outputs/minimal-server.txt")
     )
     p.append(section(2, "Minimal one-tool server and client connection", body2))
 

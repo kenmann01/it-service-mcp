@@ -224,65 +224,7 @@ The decision record is only the effect and the control id:
 {&quot;decision&quot;: &quot;approve&quot;, &quot;rule&quot;: &quot;headphones_replacement&quot;}
 ```
 
-`rule` is the control id from the row that matched. The reply to the requester cites that id. An exception is queued with `flag_for_human_review` and is not treated as an approval.</pre></section><section><h2>2. Minimal one-tool server and client connection</h2><div class="note">The simplest possible server (one trivial tool), then a client that connects, lists tools, and calls it. Captured terminal output below the sources.</div><div class="file">examples/minimal_server.py</div><pre class="code"><span class="s">""</span>"The simplest possible MCP server: one trivial tool, no business logic.
-
-This <span class="k">is</span> the suggested-approach step 1 artifact: prove the SDK installs, the
-server starts, <span class="k">and</span> the tool registers, before any real business logic exists.
-<span class="s">""</span>"
-
-<span class="k">from</span> mcp.server <span class="k">import</span> MCPServer
-<span class="k">from</span> mcp_types <span class="k">import</span> ToolAnnotations
-
-mcp = MCPServer(<span class="s">"Minimal Example"</span>)
-
-_READ_ONLY = ToolAnnotations(read_only_hint=<span class="k">True</span>)
-
-
-<span class="k">def</span> ping() -&gt; str:
-    <span class="s">""</span><span class="s">"Return pong."</span><span class="s">""</span>
-    <span class="k">return</span> <span class="s">"pong"</span>
-
-
-mcp.tool(annotations=_READ_ONLY)(ping)
-
-
-<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
-    mcp.run()</pre><div class="file">examples/minimal_client.py</div><pre class="code"><span class="s">""</span>"Minimal MCP client: connects to minimal_server.py, lists tools, calls one.
-
-This <span class="k">is</span> the suggested-approach step 3 artifact: proof that the plumbing works
-end to end before the real tools are built.
-<span class="s">""</span>"
-
-<span class="k">import</span> sys
-<span class="k">from</span> pathlib <span class="k">import</span> Path
-
-<span class="k">import</span> anyio
-<span class="k">from</span> mcp.client.session <span class="k">import</span> ClientSession
-<span class="k">from</span> mcp.client.stdio <span class="k">import</span> StdioServerParameters, stdio_client
-
-SERVER = Path(__file__).resolve().parent / <span class="s">"minimal_server.py"</span>
-
-
-<span class="k">async</span> <span class="k">def</span> main() -&gt; <span class="k">None</span>:
-    <span class="s">""</span><span class="s">"Connect to the minimal server, list its tools, and call ping."</span><span class="s">""</span>
-    parameters = StdioServerParameters(command=sys.executable, args=[str(SERVER)])
-    print(f<span class="s">"Connecting to {SERVER.name} over stdio..."</span>)
-    <span class="k">async</span> <span class="k">with</span> stdio_client(parameters) <span class="k">as</span> streams:
-        <span class="k">async</span> <span class="k">with</span> ClientSession(streams[0], streams[1]) <span class="k">as</span> session:
-            <span class="k">await</span> session.initialize()
-            listed = <span class="k">await</span> session.list_tools()
-            names = [tool.name <span class="k">for</span> tool <span class="k">in</span> listed.tools]
-            print(f<span class="s">"Registered tools: {names}"</span>)
-            print(<span class="s">"Calling ping()..."</span>)
-            result = <span class="k">await</span> session.call_tool(<span class="s">"ping"</span>, {})
-            print(f<span class="s">"ping() -&gt; {result.content[0].text}"</span>)
-
-
-<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
-    anyio.run(main)</pre><div class="file">demo/outputs/minimal-server.txt</div><pre class="term">Connecting to minimal_server.py over stdio...
-Registered tools: [&#x27;ping&#x27;]
-Calling ping()...
-ping() -&gt; pong</pre><div class="note">The code below is the repository as it existed in the first two commits, before the agent was built: the basic server skeleton first, then the four tools as plain functions over self-generated mock data, their unit tests, and the client used to confirm connectivity.</div><div class="file">app/src/server.py — as first committed (dc17847)</div><pre class="code"><span class="k">from</span> mcp.server <span class="k">import</span> MCPServer
+`rule` is the control id from the row that matched. The reply to the requester cites that id. An exception is queued with `flag_for_human_review` and is not treated as an approval.</pre></section><section><h2>2. Minimal one-tool server and client connection</h2><div class="note">Built in order, in the repo's first two commits: the basic server skeleton first (the SDK installs, the server starts), then the four tools as plain functions over self-generated mock data, their unit tests, and the MCP client used to confirm connectivity. All of it existed before the agent.</div><div class="file">app/src/server.py — as first committed (dc17847)</div><pre class="code"><span class="k">from</span> mcp.server <span class="k">import</span> MCPServer
 
 mcp = MCPServer(<span class="s">"Demo"</span>)
 
@@ -768,7 +710,65 @@ sys.path.insert(0, str(SRC))
 
 
 <span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
-    main()</pre></section><section><h2>3. MCP server code (all five tools)</h2><div class="note">Server and tool sources. Every module, class, and function carries a docstring (294 of 294 by AST count); policy lives in the deterministic evaluate_request register, never in the model.</div><div class="file">app/src/server.py</div><pre class="code"><span class="s">""</span><span class="s">"MCP server for the Internal IT Service: registers the five request tools."</span><span class="s">""</span>
+    main()</pre><div class="note">The step-3 plumbing proof: one trivial tool on a minimal server, a client that connects, lists tools, and calls it, with the captured terminal run.</div><div class="file">examples/minimal_server.py</div><pre class="code"><span class="s">""</span>"The simplest possible MCP server: one trivial tool, no business logic.
+
+This <span class="k">is</span> the suggested-approach step 1 artifact: prove the SDK installs, the
+server starts, <span class="k">and</span> the tool registers, before any real business logic exists.
+<span class="s">""</span>"
+
+<span class="k">from</span> mcp.server <span class="k">import</span> MCPServer
+<span class="k">from</span> mcp_types <span class="k">import</span> ToolAnnotations
+
+mcp = MCPServer(<span class="s">"Minimal Example"</span>)
+
+_READ_ONLY = ToolAnnotations(read_only_hint=<span class="k">True</span>)
+
+
+<span class="k">def</span> ping() -&gt; str:
+    <span class="s">""</span><span class="s">"Return pong."</span><span class="s">""</span>
+    <span class="k">return</span> <span class="s">"pong"</span>
+
+
+mcp.tool(annotations=_READ_ONLY)(ping)
+
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    mcp.run()</pre><div class="file">examples/minimal_client.py</div><pre class="code"><span class="s">""</span>"Minimal MCP client: connects to minimal_server.py, lists tools, calls one.
+
+This <span class="k">is</span> the suggested-approach step 3 artifact: proof that the plumbing works
+end to end before the real tools are built.
+<span class="s">""</span>"
+
+<span class="k">import</span> sys
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+<span class="k">import</span> anyio
+<span class="k">from</span> mcp.client.session <span class="k">import</span> ClientSession
+<span class="k">from</span> mcp.client.stdio <span class="k">import</span> StdioServerParameters, stdio_client
+
+SERVER = Path(__file__).resolve().parent / <span class="s">"minimal_server.py"</span>
+
+
+<span class="k">async</span> <span class="k">def</span> main() -&gt; <span class="k">None</span>:
+    <span class="s">""</span><span class="s">"Connect to the minimal server, list its tools, and call ping."</span><span class="s">""</span>
+    parameters = StdioServerParameters(command=sys.executable, args=[str(SERVER)])
+    print(f<span class="s">"Connecting to {SERVER.name} over stdio..."</span>)
+    <span class="k">async</span> <span class="k">with</span> stdio_client(parameters) <span class="k">as</span> streams:
+        <span class="k">async</span> <span class="k">with</span> ClientSession(streams[0], streams[1]) <span class="k">as</span> session:
+            <span class="k">await</span> session.initialize()
+            listed = <span class="k">await</span> session.list_tools()
+            names = [tool.name <span class="k">for</span> tool <span class="k">in</span> listed.tools]
+            print(f<span class="s">"Registered tools: {names}"</span>)
+            print(<span class="s">"Calling ping()..."</span>)
+            result = <span class="k">await</span> session.call_tool(<span class="s">"ping"</span>, {})
+            print(f<span class="s">"ping() -&gt; {result.content[0].text}"</span>)
+
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    anyio.run(main)</pre><div class="file">demo/outputs/minimal-server.txt</div><pre class="term">Connecting to minimal_server.py over stdio...
+Registered tools: [&#x27;ping&#x27;]
+Calling ping()...
+ping() -&gt; pong</pre></section><section><h2>3. MCP server code (all five tools)</h2><div class="note">Server and tool sources. Every module, class, and function carries a docstring (294 of 294 by AST count); policy lives in the deterministic evaluate_request register, never in the model.</div><div class="file">app/src/server.py</div><pre class="code"><span class="s">""</span><span class="s">"MCP server for the Internal IT Service: registers the five request tools."</span><span class="s">""</span>
 
 <span class="k">from</span> mcp.server <span class="k">import</span> MCPServer
 <span class="k">from</span> mcp_types <span class="k">import</span> ToolAnnotations
