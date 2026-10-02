@@ -1,0 +1,7 @@
+REQUEST: Hi, I'm Mani. I'd like a vanilla latte, protein goals.
+
+[DRAFT] The request is not for IT equipment.
+[REFLECTION] Draft corrected: The request is not for IT equipment. Please provide details if this was an error.
+
+FINAL RESPONSE:
+The request is not for IT equipment. Please provide details if this was an error.

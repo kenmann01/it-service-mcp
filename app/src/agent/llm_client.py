@@ -55,12 +55,16 @@ class OllamaClient:
         host: str = DEFAULT_HOST,
         model: str = DEFAULT_MODEL,
         temperature: float = 0.3,
-        timeout: float = 120.0,
+        timeout: float = 240.0,
+        think: bool = False,
+        keep_alive: str = "30m",
     ) -> None:
         self.host = host.rstrip("/")
         self.model = model
         self.temperature = temperature
-        self.timeout = timeout  # generous: the first call loads the model into memory
+        self.timeout = timeout  # generous: a cold start loads the model into VRAM
+        self.think = think
+        self.keep_alive = keep_alive
 
     @classmethod
     def from_env(cls) -> "OllamaClient":
@@ -76,6 +80,8 @@ class OllamaClient:
             "model": self.model,
             "messages": messages,
             "stream": False,
+            "think": self.think,
+            "keep_alive": self.keep_alive,
             "options": {"temperature": self.temperature},
         }
         if tools:

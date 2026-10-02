@@ -16,10 +16,11 @@ TOOL OBSERVATIONS (from the ReAct trace):
 {observations}
 
 Check the draft against the observations:
-1. Does it claim anything the observations do not support?
-2. Does it state the decision and rule exactly as the evaluate_request tool returned them?
-3. If the request was escalated, does the handoff mention the review id and the real reason?
-4. Does it commit to anything (approval, refusal) the data does not clearly support?
+1. Is the draft an actual message to the requester? If it is a note about drafting, or mentions tools, iterations, or routing, that is a failure: correct it into a proper message.
+2. Does it claim anything the observations do not support?
+3. Does it state the decision and rule exactly as the evaluate_request tool returned them?
+4. If the request was escalated, does the handoff mention the review id and the real reason?
+5. Does it commit to anything (approval, refusal) the data does not clearly support?
 
 If the draft is accurate, reply exactly: CONFIRMED
 If the draft needs fixing, reply exactly: CORRECTED: <the revised draft>

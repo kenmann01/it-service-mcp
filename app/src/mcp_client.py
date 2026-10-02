@@ -89,7 +89,7 @@ class MCPClient:
                 "function": {
                     "name": tool.name,
                     "description": tool.description or "",
-                    "parameters": tool.inputSchema,
+                    "parameters": tool.input_schema,
                 },
             }
             for tool in listed.tools

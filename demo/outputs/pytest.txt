@@ -1,0 +1,57 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- D:\Genspark\it-service-mcp\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Genspark\it-service-mcp
+configfile: pyproject.toml
+testpaths: app/tests
+plugins: anyio-4.15.1
+collecting ... collected 45 items
+
+app/tests/test_decision.py::ClassifyReasonTests::test_each_signal_class PASSED [  2%]
+app/tests/test_decision.py::ClassifyReasonTests::test_matching_ignores_case_and_outer_spaces PASSED [  4%]
+app/tests/test_decision.py::ClassifyReasonTests::test_second_plus_first_is_unclear PASSED [  6%]
+app/tests/test_decision.py::ClassifyReasonTests::test_unrecognized_reason_is_unclear PASSED [  8%]
+app/tests/test_decision.py::ClassifyReasonTests::test_week_overlap_beats_replacement PASSED [ 11%]
+app/tests/test_decision.py::ClassifyReasonTests::test_week_overlap_needs_all_three_signals PASSED [ 13%]
+app/tests/test_decision.py::EvaluateRequestTests::test_blank_field_escalates PASSED [ 15%]
+app/tests/test_decision.py::EvaluateRequestTests::test_employee_laptop_is_denied PASSED [ 17%]
+app/tests/test_decision.py::EvaluateRequestTests::test_employee_phone_rules PASSED [ 20%]
+app/tests/test_decision.py::EvaluateRequestTests::test_headphones_replacement_and_first_are_approved PASSED [ 22%]
+app/tests/test_decision.py::EvaluateRequestTests::test_headphones_second_is_denied PASSED [ 24%]
+app/tests/test_decision.py::EvaluateRequestTests::test_manager_and_director_phone_rules PASSED [ 26%]
+app/tests/test_decision.py::EvaluateRequestTests::test_manager_laptop_week_overlap_escalates PASSED [ 28%]
+app/tests/test_decision.py::EvaluateRequestTests::test_normalizes_role_item_and_reason PASSED [ 31%]
+app/tests/test_decision.py::EvaluateRequestTests::test_other_manager_laptops_are_denied PASSED [ 33%]
+app/tests/test_decision.py::EvaluateRequestTests::test_unclear_and_week_overlap_reasons_escalate PASSED [ 35%]
+app/tests/test_decision.py::EvaluateRequestTests::test_unknown_item_escalates PASSED [ 37%]
+app/tests/test_decision.py::EvaluateRequestTests::test_unknown_role_escalates PASSED [ 40%]
+app/tests/test_decision.py::FixtureTests::test_all_fixture_cases_match_expected_decision 
+app/tests/test_decision.py::FixtureTests::test_all_fixture_cases_match_expected_decision PASSED [ 42%]
+app/tests/test_react.py::ApprovePathTests::test_approve_routes_to_a_draft_without_escalation PASSED [ 44%]
+app/tests/test_react.py::ApprovePathTests::test_trace_records_tao_and_route_steps PASSED [ 46%]
+app/tests/test_react.py::EscalatePathTests::test_deny_never_calls_the_escalation_tool PASSED [ 48%]
+app/tests/test_react.py::EscalatePathTests::test_escalation_flags_for_human_review PASSED [ 51%]
+app/tests/test_react.py::LoopGuardTests::test_max_iterations_returns_the_fallback PASSED [ 53%]
+app/tests/test_react.py::ReflectionSeamTests::test_reflector_can_correct_the_draft PASSED [ 55%]
+app/tests/test_react.py::ReflectionSeamTests::test_trace_can_run_silently PASSED [ 57%]
+app/tests/test_reflection.py::ReflectTests::test_confirmed_keeps_the_draft PASSED [ 60%]
+app/tests/test_reflection.py::ReflectTests::test_corrected_replaces_the_draft PASSED [ 62%]
+app/tests/test_reflection.py::ReflectTests::test_empty_correction_keeps_the_original PASSED [ 64%]
+app/tests/test_reflection.py::ReflectTests::test_prompt_includes_draft_and_observations PASSED [ 66%]
+app/tests/test_reflection.py::ReflectTests::test_unparseable_reply_fails_open PASSED [ 68%]
+app/tests/test_tools.py::EmployeeInfoTests::test_known_employee PASSED   [ 71%]
+app/tests/test_tools.py::EmployeeInfoTests::test_strips_id_whitespace PASSED [ 73%]
+app/tests/test_tools.py::EmployeeInfoTests::test_unknown_employee PASSED [ 75%]
+app/tests/test_tools.py::PolicyLimitTests::test_each_role PASSED         [ 77%]
+app/tests/test_tools.py::PolicyLimitTests::test_employee_phone_period_is_replacement_only PASSED [ 80%]
+app/tests/test_tools.py::PolicyLimitTests::test_manager_phone_covers_a_first_phone PASSED [ 82%]
+app/tests/test_tools.py::PolicyLimitTests::test_unknown_role PASSED      [ 84%]
+app/tests/test_tools.py::EligibilityTests::test_does_not_use_equipment_on_file PASSED [ 86%]
+app/tests/test_tools.py::EligibilityTests::test_headphones_are_eligible_for_every_role PASSED [ 88%]
+app/tests/test_tools.py::EligibilityTests::test_laptop_is_never_eligible PASSED [ 91%]
+app/tests/test_tools.py::EligibilityTests::test_phone_is_eligible_for_every_role PASSED [ 93%]
+app/tests/test_tools.py::EligibilityTests::test_unknown_item_and_unknown_employee PASSED [ 95%]
+app/tests/test_tools.py::HumanReviewTests::test_blank_fields_are_still_escalated PASSED [ 97%]
+app/tests/test_tools.py::HumanReviewTests::test_two_escalations_get_distinct_ids PASSED [100%]
+
+=================== 45 passed, 10 subtests passed in 0.71s ====================

@@ -60,7 +60,7 @@ PLAN
 1. Call get_employee_info to identify the requester and their role.
 2. Call evaluate_request with the four extracted fields. Use the role returned by get_employee_info, not one you infer, unless get_employee_info does not find the requester: then use the role exactly as the user stated it, unusual as it may be. If a field is missing from the request, pass an empty string for it. Pass the reason text as the user wrote it.
 3. Route by the decision evaluate_request returned: {json.dumps(_ROUTES)}
-4. Write the final draft and nothing else. Keep it under six sentences and address the requester by name.
+4. Write the final draft and nothing else. The draft is the message that goes to the requester: an approval says what is granted and cites the rule; a denial says it is refused and cites the rule and the policy reason; a handoff names the review id and why. Keep it under six sentences and address the requester by name. Never mention tools, iterations, routing, or drafting inside the draft.
 
 Before every tool call, write one short sentence explaining why. Never guess: an
 ambiguous or out-of-scope request must reach a decision through evaluate_request,

@@ -1,0 +1,14 @@
+REQUEST: Hi, I'm Linus Torvalds (E010). I need a laptop for my work.
+
+[THOUGHT] (iteration 1) I need to call get_employee_info.
+[ACTION] get_employee_info({"employee_id": "E010"})
+[OBSERVATION] {"employee_id": "E010", "equipment": ["laptop"], "found": true, "name": "Linus Torvalds", "role": "employee", "tenure_years": 10}
+[THOUGHT] (iteration 2) I need to call evaluate_request.
+[ACTION] evaluate_request({"employee": "Linus Torvalds", "item_requested": "laptop", "reason": "for my work", "role": "employee"})
+[OBSERVATION] {"decision": "deny", "rule": "employee_laptop"}
+[ROUTE] deny (employee_laptop) -> draft the refusal, naming the rule; do not call flag_for_human_review
+[DRAFT] I need to draft the denial message.
+[REFLECTION] Draft corrected: Your request for a laptop has been denied. According to our policy, employees are not eligible for laptops. Please consult your manager for further assistance.
+
+FINAL RESPONSE:
+Your request for a laptop has been denied. According to our policy, employees are not eligible for laptops. Please consult your manager for further assistance.
