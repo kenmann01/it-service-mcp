@@ -3,6 +3,7 @@
 from typing import NotRequired, TypedDict
 
 from tools.data_store import load_employees
+from tools.intake import EmployeeLookup, RequiredId
 
 
 class EmployeeInfo(TypedDict):
@@ -16,9 +17,9 @@ class EmployeeInfo(TypedDict):
     equipment: NotRequired[list[str]]
 
 
-def get_employee_info(employee_id: str) -> EmployeeInfo:
+def get_employee_info(employee_id: RequiredId) -> EmployeeInfo:
     """Return role, tenure, and current equipment on file for an employee."""
-    key = employee_id.strip()
+    key = EmployeeLookup.model_validate({"employee_id": employee_id}).employee_id
     for employee in load_employees():
         if employee["employee_id"] == key:
             return {

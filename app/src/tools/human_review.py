@@ -2,6 +2,8 @@
 
 from typing import TypedDict
 
+from tools.intake import RequiredId, ReviewFlag, Text
+
 _reviews: list["ReviewRecord"] = []
 
 
@@ -15,13 +17,16 @@ class ReviewRecord(TypedDict):
     status: str
 
 
-def flag_for_human_review(employee_id: str, request: str, reason: str) -> ReviewRecord:
+def flag_for_human_review(employee_id: RequiredId, request: Text, reason: Text) -> ReviewRecord:
     """Escalate a request for human review. This records the request and never approves it."""
+    parsed = ReviewFlag.model_validate(
+        {"employee_id": employee_id, "request": request, "reason": reason}
+    )
     record: ReviewRecord = {
         "review_id": f"R{len(_reviews) + 1:03d}",
-        "employee_id": employee_id,
-        "request": request,
-        "reason": reason,
+        "employee_id": parsed.employee_id,
+        "request": parsed.request,
+        "reason": parsed.reason,
         "status": "escalated",
     }
     _reviews.append(record)

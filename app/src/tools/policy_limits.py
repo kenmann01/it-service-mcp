@@ -3,6 +3,7 @@
 from typing import NotRequired, TypedDict
 
 from tools.data_store import load_policy_limits
+from tools.intake import PolicyLookup, RequiredRole
 
 
 class ItemLimit(TypedDict):
@@ -21,9 +22,9 @@ class PolicyLimits(TypedDict):
     items: NotRequired[dict[str, ItemLimit]]
 
 
-def get_policy_limits(role: str) -> PolicyLimits:
+def get_policy_limits(role: RequiredRole) -> PolicyLimits:
     """Return what a role is eligible for and the period for each item."""
-    key = role.strip().lower()
+    key = PolicyLookup.model_validate({"role": role}).role.lower()
     limits = load_policy_limits()
     if key not in limits:
         return {"role": key, "known": False}
