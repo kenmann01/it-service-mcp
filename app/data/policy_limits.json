@@ -1,0 +1,44 @@
+{
+  "employee": {
+    "headphones": {
+      "eligible": true,
+      "period": "A first pair and a replacement are covered. A second or spare pair is not."
+    },
+    "phone": {
+      "eligible": true,
+      "period": "A replacement is covered. A first phone or a second phone is not."
+    },
+    "laptop": {
+      "eligible": false,
+      "period": "Not covered. A laptop request is escalated."
+    }
+  },
+  "manager": {
+    "headphones": {
+      "eligible": true,
+      "period": "A first pair and a replacement are covered. A second or spare pair is not."
+    },
+    "phone": {
+      "eligible": true,
+      "period": "A first phone and a replacement are covered. A second phone is not."
+    },
+    "laptop": {
+      "eligible": false,
+      "period": "Not covered. A laptop request is escalated."
+    }
+  },
+  "director": {
+    "headphones": {
+      "eligible": true,
+      "period": "A first pair and a replacement are covered. A second or spare pair is not."
+    },
+    "phone": {
+      "eligible": true,
+      "period": "A first phone and a replacement are covered. A second phone is not."
+    },
+    "laptop": {
+      "eligible": false,
+      "period": "Not covered. A laptop request is escalated."
+    }
+  }
+}

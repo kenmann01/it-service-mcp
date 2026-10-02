@@ -1,0 +1,95 @@
+{
+  "employees": [
+    {
+      "employee_id": "E001",
+      "name": "Grace Hopper",
+      "role": "employee",
+      "tenure_years": 14,
+      "equipment": ["headphones", "laptop"]
+    },
+    {
+      "employee_id": "E002",
+      "name": "Katherine Johnson",
+      "role": "employee",
+      "tenure_years": 8,
+      "equipment": ["laptop"]
+    },
+    {
+      "employee_id": "E003",
+      "name": "Alan Turing",
+      "role": "manager",
+      "tenure_years": 11,
+      "equipment": ["headphones", "phone", "laptop"]
+    },
+    {
+      "employee_id": "E004",
+      "name": "Margaret Hamilton",
+      "role": "director",
+      "tenure_years": 20,
+      "equipment": ["headphones", "phone", "laptop"]
+    },
+    {
+      "employee_id": "E005",
+      "name": "Radia Perlman",
+      "role": "employee",
+      "tenure_years": 9,
+      "equipment": ["phone", "laptop"]
+    },
+    {
+      "employee_id": "E006",
+      "name": "Tim Berners-Lee",
+      "role": "employee",
+      "tenure_years": 7,
+      "equipment": ["phone", "laptop"]
+    },
+    {
+      "employee_id": "E007",
+      "name": "Barbara Liskov",
+      "role": "manager",
+      "tenure_years": 16,
+      "equipment": ["laptop"]
+    },
+    {
+      "employee_id": "E008",
+      "name": "Donald Knuth",
+      "role": "director",
+      "tenure_years": 30,
+      "equipment": ["headphones", "phone", "laptop"]
+    },
+    {
+      "employee_id": "E009",
+      "name": "Ada Lovelace",
+      "role": "manager",
+      "tenure_years": 6,
+      "equipment": ["phone", "laptop"]
+    },
+    {
+      "employee_id": "E010",
+      "name": "Linus Torvalds",
+      "role": "employee",
+      "tenure_years": 10,
+      "equipment": ["laptop"]
+    },
+    {
+      "employee_id": "E011",
+      "name": "Adele Goldberg",
+      "role": "employee",
+      "tenure_years": 1,
+      "equipment": []
+    },
+    {
+      "employee_id": "E012",
+      "name": "Edsger Dijkstra",
+      "role": "manager",
+      "tenure_years": 4,
+      "equipment": ["phone"]
+    },
+    {
+      "employee_id": "E013",
+      "name": "Frances Allen",
+      "role": "director",
+      "tenure_years": 18,
+      "equipment": ["headphones"]
+    }
+  ]
+}
