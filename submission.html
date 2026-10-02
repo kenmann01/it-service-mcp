@@ -282,33 +282,493 @@ SERVER = Path(__file__).resolve().parent / <span class="s">"minimal_server.py"</
     anyio.run(main)</pre><div class="file">demo/outputs/minimal-server.txt</div><pre class="term">Connecting to minimal_server.py over stdio...
 Registered tools: [&#x27;ping&#x27;]
 Calling ping()...
-ping() -&gt; pong</pre><div class="note">Build order evidence, from the repo history: the setup and the tested plain-function decision tool landed first, then this minimal server/client plumbing, then the agent four minutes later (Suggested Approach steps 1&ndash;4 before step 5). The same log records the docstring passes; the scan below counts the coverage.</div><div class="file">demo/outputs/build-order.txt</div><pre class="term">=== BUILD ORDER: git log, oldest first, all times local ===
-dc17847 Oct 01 16:45 chore: Docs and basic MCP setup
-c3a3ad7 Oct 01 23:45 chore: tool creation and data enumeration
-412e914 Oct 02 00:21 docs: add deny outcome to policy, 16-rule procedure
-9ac9457 Oct 02 00:23 feat: evaluate_request decision tool (16 rules) + decision tests, pytest dev setup
-0fe86fb Oct 02 00:26 feat: minimal one-tool server + client example (suggested-approach steps 1-3)
-2313d7a Oct 02 00:30 feat: Planner/TAO/Reflector agent (ReAct loop, routing, Ollama client) + fakes tests
-51f1b7e Oct 02 00:33 feat: 24-request demo pool + batch runner
-3bbb385 Oct 02 00:34 feat: CI pipeline, README, .env.example
-8aa0c70 Oct 02 01:01 fix: SDK v2 input_schema, think:false + keep_alive, stricter draft/reflection prompts, submission builder
-948cb02 Oct 02 01:09 feat: guard against drafts before evaluate_request; fix pool case text; recapture demos
-fae15da Oct 02 01:17 docs: capture 24/24 pool results and CI evidence
-240db63 Oct 02 01:32 docs: submission PDF (9 sections), builder escape and page-break fixes
-b09bde4 Oct 02 09:50 tests: added tests to unit test the llm client, mcp client and added docstring to each test
-fa0f187 Oct 02 09:51 docs: added docstring to each function for better readability
-b60d52e Oct 02 09:52 fix: Readme now defines the ollama architecture being hosted outside the docker container
-5a63252 Oct 02 15:21 fix: the agent was skipping over the ReAct loop. This commit fixes that and adds docstring to the functions
-2434fe0 Oct 02 15:21 tests: Added updated tests for ReAct loop
-b427a82 Oct 02 15:34 docs: recapture traces that call policy and eligibility tools
-28cfbc7 Oct 02 15:35 docs: rebuild the submission from the full traces and green CI run
-8c43302 Oct 02 15:46 docs: add the request handbook and the local desk
-d45449d Oct 02 18:38 fix: let grounded non-catalog items reach evaluate_request
-a5fa037 Oct 02 18:38 docs: rebuild the submission on host ollama and add the desk screenshot
-03c3227 Oct 02 18:39 docs: point the submission at the CI run for the fix
+ping() -&gt; pong</pre><div class="note">The code below is the repository as it existed in the first two commits, before the agent was built: the basic server skeleton first, then the four tools as plain functions over self-generated mock data, their unit tests, and the client used to confirm connectivity.</div><div class="file">app/src/server.py — as first committed (dc17847)</div><pre class="code"><span class="k">from</span> mcp.server <span class="k">import</span> MCPServer
 
-=== DOCSTRING COVERAGE: ast scan of app/src, app/scripts, app/tests, examples ===
-292/292 modules, classes, and functions carry docstrings</pre></section><section><h2>3. MCP server code (all five tools)</h2><div class="note">Server and tool sources. Every module, class, and function carries a docstring (292 of 292, counted in section 2); policy lives in the deterministic evaluate_request register, never in the model.</div><div class="file">app/src/server.py</div><pre class="code"><span class="s">""</span><span class="s">"MCP server for the Internal IT Service: registers the five request tools."</span><span class="s">""</span>
+mcp = MCPServer(<span class="s">"Demo"</span>)
+
+
+@mcp.tool()
+<span class="k">def</span> add(a: int, b: int) -&gt; int:
+    <span class="s">""</span><span class="s">"Add two numbers."</span><span class="s">""</span>
+    <span class="k">return</span> a + b
+
+
+@mcp.resource(<span class="s">"greeting://{name}"</span>)
+<span class="k">def</span> greeting(name: str) -&gt; str:
+    <span class="s">""</span><span class="s">"Greet someone by name."</span><span class="s">""</span>
+    <span class="k">return</span> f<span class="s">"Hello, {name}!"</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    mcp.run()</pre><div class="file">app/src/tools/data_store.py — as first committed (c3a3ad7)</div><pre class="code"><span class="s">""</span><span class="s">"Load the synthetic employee and policy JSON used by the IT tools."</span><span class="s">""</span>
+
+<span class="k">import</span> json
+<span class="k">from</span> functools <span class="k">import</span> lru_cache
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">from</span> typing <span class="k">import</span> Any
+
+DATA_DIR = Path(__file__).resolve().parents[2] / <span class="s">"data"</span>
+
+
+@lru_cache(maxsize=1)
+<span class="k">def</span> load_employees() -&gt; tuple[dict[str, Any], ...]:
+    payload = json.loads((DATA_DIR / <span class="s">"employees.json"</span>).read_text(encoding=<span class="s">"utf-8"</span>))
+    <span class="k">return</span> tuple(payload[<span class="s">"employees"</span>])
+
+
+@lru_cache(maxsize=1)
+<span class="k">def</span> load_policy_limits() -&gt; dict[str, Any]:
+    <span class="k">return</span> json.loads((DATA_DIR / <span class="s">"policy_limits.json"</span>).read_text(encoding=<span class="s">"utf-8"</span>))</pre><div class="file">app/data/employees.json — as first committed (c3a3ad7)</div><pre class="code">{
+  &quot;employees&quot;: [
+    {
+      &quot;employee_id&quot;: &quot;E001&quot;,
+      &quot;name&quot;: &quot;Grace Hopper&quot;,
+      &quot;role&quot;: &quot;employee&quot;,
+      &quot;tenure_years&quot;: 14,
+      &quot;equipment&quot;: [&quot;headphones&quot;, &quot;laptop&quot;]
+    },
+    {
+      &quot;employee_id&quot;: &quot;E002&quot;,
+      &quot;name&quot;: &quot;Katherine Johnson&quot;,
+      &quot;role&quot;: &quot;employee&quot;,
+      &quot;tenure_years&quot;: 8,
+      &quot;equipment&quot;: [&quot;laptop&quot;]
+    },
+    {
+      &quot;employee_id&quot;: &quot;E003&quot;,
+      &quot;name&quot;: &quot;Alan Turing&quot;,
+      &quot;role&quot;: &quot;manager&quot;,
+      &quot;tenure_years&quot;: 11,
+      &quot;equipment&quot;: [&quot;headphones&quot;, &quot;phone&quot;, &quot;laptop&quot;]
+    },
+    {
+      &quot;employee_id&quot;: &quot;E004&quot;,
+      &quot;name&quot;: &quot;Margaret Hamilton&quot;,
+      &quot;role&quot;: &quot;director&quot;,
+      &quot;tenure_years&quot;: 20,
+      &quot;equipment&quot;: [&quot;headphones&quot;, &quot;phone&quot;, &quot;laptop&quot;]
+    },
+    {
+      &quot;employee_id&quot;: &quot;E005&quot;,
+      &quot;name&quot;: &quot;Radia Perlman&quot;,
+      &quot;role&quot;: &quot;employee&quot;,
+      &quot;tenure_years&quot;: 9,
+      &quot;equipment&quot;: [&quot;phone&quot;, &quot;laptop&quot;]
+    },
+    {
+      &quot;employee_id&quot;: &quot;E006&quot;,
+      &quot;name&quot;: &quot;Tim Berners-Lee&quot;,
+      &quot;role&quot;: &quot;employee&quot;,
+      &quot;tenure_years&quot;: 7,
+      &quot;equipment&quot;: [&quot;phone&quot;, &quot;laptop&quot;]
+    },
+    {
+      &quot;employee_id&quot;: &quot;E007&quot;,
+      &quot;name&quot;: &quot;Barbara Liskov&quot;,
+      &quot;role&quot;: &quot;manager&quot;,
+      &quot;tenure_years&quot;: 16,
+      &quot;equipment&quot;: [&quot;laptop&quot;]
+    },
+    {
+      &quot;employee_id&quot;: &quot;E008&quot;,
+      &quot;name&quot;: &quot;Donald Knuth&quot;,
+      &quot;role&quot;: &quot;director&quot;,
+      &quot;tenure_years&quot;: 30,
+      &quot;equipment&quot;: [&quot;headphones&quot;, &quot;phone&quot;, &quot;laptop&quot;]
+    },
+    {
+      &quot;employee_id&quot;: &quot;E009&quot;,
+      &quot;name&quot;: &quot;Ada Lovelace&quot;,
+      &quot;role&quot;: &quot;manager&quot;,
+      &quot;tenure_years&quot;: 6,
+      &quot;equipment&quot;: [&quot;phone&quot;, &quot;laptop&quot;]
+    },
+    {
+      &quot;employee_id&quot;: &quot;E010&quot;,
+      &quot;name&quot;: &quot;Linus Torvalds&quot;,
+      &quot;role&quot;: &quot;employee&quot;,
+      &quot;tenure_years&quot;: 10,
+      &quot;equipment&quot;: [&quot;laptop&quot;]
+    },
+    {
+      &quot;employee_id&quot;: &quot;E011&quot;,
+      &quot;name&quot;: &quot;Adele Goldberg&quot;,
+      &quot;role&quot;: &quot;employee&quot;,
+      &quot;tenure_years&quot;: 1,
+      &quot;equipment&quot;: []
+    },
+    {
+      &quot;employee_id&quot;: &quot;E012&quot;,
+      &quot;name&quot;: &quot;Edsger Dijkstra&quot;,
+      &quot;role&quot;: &quot;manager&quot;,
+      &quot;tenure_years&quot;: 4,
+      &quot;equipment&quot;: [&quot;phone&quot;]
+    },
+    {
+      &quot;employee_id&quot;: &quot;E013&quot;,
+      &quot;name&quot;: &quot;Frances Allen&quot;,
+      &quot;role&quot;: &quot;director&quot;,
+      &quot;tenure_years&quot;: 18,
+      &quot;equipment&quot;: [&quot;headphones&quot;]
+    }
+  ]
+}</pre><div class="file">app/data/policy_limits.json — as first committed (c3a3ad7)</div><pre class="code">{
+  &quot;employee&quot;: {
+    &quot;headphones&quot;: {
+      &quot;eligible&quot;: true,
+      &quot;period&quot;: &quot;A first pair and a replacement are covered. A second or spare pair is not.&quot;
+    },
+    &quot;phone&quot;: {
+      &quot;eligible&quot;: true,
+      &quot;period&quot;: &quot;A replacement is covered. A first phone or a second phone is not.&quot;
+    },
+    &quot;laptop&quot;: {
+      &quot;eligible&quot;: false,
+      &quot;period&quot;: &quot;Not covered. A laptop request is escalated.&quot;
+    }
+  },
+  &quot;manager&quot;: {
+    &quot;headphones&quot;: {
+      &quot;eligible&quot;: true,
+      &quot;period&quot;: &quot;A first pair and a replacement are covered. A second or spare pair is not.&quot;
+    },
+    &quot;phone&quot;: {
+      &quot;eligible&quot;: true,
+      &quot;period&quot;: &quot;A first phone and a replacement are covered. A second phone is not.&quot;
+    },
+    &quot;laptop&quot;: {
+      &quot;eligible&quot;: false,
+      &quot;period&quot;: &quot;Not covered. A laptop request is escalated.&quot;
+    }
+  },
+  &quot;director&quot;: {
+    &quot;headphones&quot;: {
+      &quot;eligible&quot;: true,
+      &quot;period&quot;: &quot;A first pair and a replacement are covered. A second or spare pair is not.&quot;
+    },
+    &quot;phone&quot;: {
+      &quot;eligible&quot;: true,
+      &quot;period&quot;: &quot;A first phone and a replacement are covered. A second phone is not.&quot;
+    },
+    &quot;laptop&quot;: {
+      &quot;eligible&quot;: false,
+      &quot;period&quot;: &quot;Not covered. A laptop request is escalated.&quot;
+    }
+  }
+}</pre><div class="file">app/src/tools/employee_info.py — as first committed (c3a3ad7)</div><pre class="code"><span class="s">""</span><span class="s">"Look up role, tenure, and equipment for one employee."</span><span class="s">""</span>
+
+<span class="k">from</span> typing <span class="k">import</span> NotRequired, TypedDict
+
+<span class="k">from</span> tools.data_store <span class="k">import</span> load_employees
+
+
+<span class="k">class</span> EmployeeInfo(TypedDict):
+    found: bool
+    employee_id: str
+    name: NotRequired[str]
+    role: NotRequired[str]
+    tenure_years: NotRequired[int]
+    equipment: NotRequired[list[str]]
+
+
+<span class="k">def</span> get_employee_info(employee_id: str) -&gt; EmployeeInfo:
+    <span class="s">""</span><span class="s">"Return role, tenure, and current equipment on file for an employee."</span><span class="s">""</span>
+    key = employee_id.strip()
+    <span class="k">for</span> employee <span class="k">in</span> load_employees():
+        <span class="k">if</span> employee[<span class="s">"employee_id"</span>] == key:
+            <span class="k">return</span> {
+                <span class="s">"found"</span>: <span class="k">True</span>,
+                <span class="s">"employee_id"</span>: employee[<span class="s">"employee_id"</span>],
+                <span class="s">"name"</span>: employee[<span class="s">"name"</span>],
+                <span class="s">"role"</span>: employee[<span class="s">"role"</span>],
+                <span class="s">"tenure_years"</span>: employee[<span class="s">"tenure_years"</span>],
+                <span class="s">"equipment"</span>: list(employee[<span class="s">"equipment"</span>]),
+            }
+    <span class="k">return</span> {<span class="s">"found"</span>: <span class="k">False</span>, <span class="s">"employee_id"</span>: key}</pre><div class="file">app/src/tools/policy_limits.py — as first committed (c3a3ad7)</div><pre class="code"><span class="s">""</span><span class="s">"Role eligibility and the period that covers each item."</span><span class="s">""</span>
+
+<span class="k">from</span> typing <span class="k">import</span> NotRequired, TypedDict
+
+<span class="k">from</span> tools.data_store <span class="k">import</span> load_policy_limits
+
+
+<span class="k">class</span> ItemLimit(TypedDict):
+    eligible: bool
+    period: str
+
+
+<span class="k">class</span> PolicyLimits(TypedDict):
+    role: str
+    known: bool
+    eligible_for: NotRequired[list[str]]
+    items: NotRequired[dict[str, ItemLimit]]
+
+
+<span class="k">def</span> get_policy_limits(role: str) -&gt; PolicyLimits:
+    <span class="s">""</span><span class="s">"Return what a role is eligible for and the period for each item."</span><span class="s">""</span>
+    key = role.strip().lower()
+    limits = load_policy_limits()
+    <span class="k">if</span> key <span class="k">not</span> <span class="k">in</span> limits:
+        <span class="k">return</span> {<span class="s">"role"</span>: key, <span class="s">"known"</span>: <span class="k">False</span>}
+    items: dict[str, ItemLimit] = limits[key]
+    eligible_for = [item <span class="k">for</span> item, rule <span class="k">in</span> items.items() <span class="k">if</span> rule[<span class="s">"eligible"</span>]]
+    <span class="k">return</span> {
+        <span class="s">"role"</span>: key,
+        <span class="s">"known"</span>: <span class="k">True</span>,
+        <span class="s">"eligible_for"</span>: eligible_for,
+        <span class="s">"items"</span>: items,
+    }</pre><div class="file">app/src/tools/eligibility.py — as first committed (c3a3ad7)</div><pre class="code"><span class="s">""</span><span class="s">"Whether a role may receive an item under at least one covered reason."</span><span class="s">""</span>
+
+<span class="k">from</span> typing <span class="k">import</span> TypedDict
+
+<span class="k">from</span> tools.employee_info <span class="k">import</span> get_employee_info
+<span class="k">from</span> tools.policy_limits <span class="k">import</span> get_policy_limits
+
+
+<span class="k">class</span> Eligibility(TypedDict):
+    employee_id: str
+    item: str
+    eligible: bool
+
+
+<span class="k">def</span> check_request_eligibility(employee_id: str, item: str) -&gt; Eligibility:
+    <span class="s">""</span>"Return whether this employee's role may request this item under policy.
+
+    <span class="k">True</span> only when the role <span class="k">is</span> covered <span class="k">for</span> the item under at least one reason
+    <span class="k">class</span>. A laptop, an unknown item, <span class="k">or</span> an unknown employee <span class="k">is</span> <span class="k">not</span> eligible.
+    Equipment already on file <span class="k">is</span> <span class="k">not</span> consulted, <span class="k">and</span> the reason text <span class="k">is</span> <span class="k">not</span>
+    classified here.
+    <span class="s">""</span>"
+    info = get_employee_info(employee_id)
+    normalized = item.strip().lower()
+    <span class="k">if</span> <span class="k">not</span> info[<span class="s">"found"</span>]:
+        <span class="k">return</span> {<span class="s">"employee_id"</span>: info[<span class="s">"employee_id"</span>], <span class="s">"item"</span>: normalized, <span class="s">"eligible"</span>: <span class="k">False</span>}
+    limits = get_policy_limits(info[<span class="s">"role"</span>])
+    items = limits.get(<span class="s">"items"</span>) <span class="k">or</span> {}
+    rule = items.get(normalized)
+    eligible = bool(limits[<span class="s">"known"</span>] <span class="k">and</span> rule <span class="k">is</span> <span class="k">not</span> <span class="k">None</span> <span class="k">and</span> rule[<span class="s">"eligible"</span>])
+    <span class="k">return</span> {<span class="s">"employee_id"</span>: info[<span class="s">"employee_id"</span>], <span class="s">"item"</span>: normalized, <span class="s">"eligible"</span>: eligible}</pre><div class="file">app/src/tools/human_review.py — as first committed (c3a3ad7)</div><pre class="code"><span class="s">""</span><span class="s">"Process-local queue of requests escalated for a person to review."</span><span class="s">""</span>
+
+<span class="k">from</span> typing <span class="k">import</span> TypedDict
+
+_reviews: list[<span class="s">"ReviewRecord"</span>] = []
+
+
+<span class="k">class</span> ReviewRecord(TypedDict):
+    review_id: str
+    employee_id: str
+    request: str
+    reason: str
+    status: str
+
+
+<span class="k">def</span> flag_for_human_review(employee_id: str, request: str, reason: str) -&gt; ReviewRecord:
+    <span class="s">""</span><span class="s">"Escalate a request for human review. This records the request and never approves it."</span><span class="s">""</span>
+    record: ReviewRecord = {
+        <span class="s">"review_id"</span>: f<span class="s">"R{len(_reviews) + 1:03d}"</span>,
+        <span class="s">"employee_id"</span>: employee_id,
+        <span class="s">"request"</span>: request,
+        <span class="s">"reason"</span>: reason,
+        <span class="s">"status"</span>: <span class="s">"escalated"</span>,
+    }
+    _reviews.append(record)
+    <span class="k">return</span> record
+
+
+<span class="k">def</span> pending_reviews() -&gt; list[ReviewRecord]:
+    <span class="k">return</span> list(_reviews)
+
+
+<span class="k">def</span> clear_reviews() -&gt; <span class="k">None</span>:
+    _reviews.clear()</pre><div class="file">app/tests/test_tools.py — as first committed (c3a3ad7)</div><pre class="code"><span class="s">""</span><span class="s">"Isolated checks of the IT tools against the JSON mock data. No MCP transport."</span><span class="s">""</span>
+
+<span class="k">import</span> sys
+<span class="k">import</span> unittest
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / <span class="s">"src"</span>))
+
+<span class="k">from</span> tools.eligibility <span class="k">import</span> check_request_eligibility
+<span class="k">from</span> tools.employee_info <span class="k">import</span> get_employee_info
+<span class="k">from</span> tools.human_review <span class="k">import</span> clear_reviews, flag_for_human_review
+<span class="k">from</span> tools.policy_limits <span class="k">import</span> get_policy_limits
+
+
+<span class="k">class</span> EmployeeInfoTests(unittest.TestCase):
+    <span class="k">def</span> test_known_employee(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        info = get_employee_info(<span class="s">"E001"</span>)
+        <span class="k">self</span>.assertTrue(info[<span class="s">"found"</span>])
+        <span class="k">self</span>.assertEqual(info[<span class="s">"name"</span>], <span class="s">"Grace Hopper"</span>)
+        <span class="k">self</span>.assertEqual(info[<span class="s">"role"</span>], <span class="s">"employee"</span>)
+        <span class="k">self</span>.assertEqual(info[<span class="s">"tenure_years"</span>], 14)
+        <span class="k">self</span>.assertEqual(info[<span class="s">"equipment"</span>], [<span class="s">"headphones"</span>, <span class="s">"laptop"</span>])
+
+    <span class="k">def</span> test_strips_id_whitespace(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        info = get_employee_info(<span class="s">"  E010 "</span>)
+        <span class="k">self</span>.assertTrue(info[<span class="s">"found"</span>])
+        <span class="k">self</span>.assertEqual(info[<span class="s">"name"</span>], <span class="s">"Linus Torvalds"</span>)
+        <span class="k">self</span>.assertEqual(info[<span class="s">"role"</span>], <span class="s">"employee"</span>)
+
+    <span class="k">def</span> test_unknown_employee(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        info = get_employee_info(<span class="s">"E999"</span>)
+        <span class="k">self</span>.assertEqual(info, {<span class="s">"found"</span>: <span class="k">False</span>, <span class="s">"employee_id"</span>: <span class="s">"E999"</span>})
+
+
+<span class="k">class</span> PolicyLimitTests(unittest.TestCase):
+    <span class="k">def</span> test_each_role(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">for</span> role <span class="k">in</span> (<span class="s">"employee"</span>, <span class="s">"manager"</span>, <span class="s">"director"</span>):
+            limits = get_policy_limits(role)
+            <span class="k">self</span>.assertTrue(limits[<span class="s">"known"</span>])
+            <span class="k">self</span>.assertEqual(limits[<span class="s">"eligible_for"</span>], [<span class="s">"headphones"</span>, <span class="s">"phone"</span>])
+            <span class="k">self</span>.assertFalse(limits[<span class="s">"items"</span>][<span class="s">"laptop"</span>][<span class="s">"eligible"</span>])
+            <span class="k">self</span>.assertIn(<span class="s">"period"</span>, limits[<span class="s">"items"</span>][<span class="s">"headphones"</span>])
+
+    <span class="k">def</span> test_employee_phone_period_is_replacement_only(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        limits = get_policy_limits(<span class="s">" Employee "</span>)
+        <span class="k">self</span>.assertEqual(limits[<span class="s">"role"</span>], <span class="s">"employee"</span>)
+        <span class="k">self</span>.assertIn(<span class="s">"replacement"</span>, limits[<span class="s">"items"</span>][<span class="s">"phone"</span>][<span class="s">"period"</span>].lower())
+        <span class="k">self</span>.assertNotIn(<span class="s">"year"</span>, limits[<span class="s">"items"</span>][<span class="s">"phone"</span>][<span class="s">"period"</span>].lower())
+
+    <span class="k">def</span> test_manager_phone_covers_a_first_phone(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        period = get_policy_limits(<span class="s">"manager"</span>)[<span class="s">"items"</span>][<span class="s">"phone"</span>][<span class="s">"period"</span>].lower()
+        <span class="k">self</span>.assertIn(<span class="s">"first"</span>, period)
+        <span class="k">self</span>.assertIn(<span class="s">"second"</span>, period)
+
+    <span class="k">def</span> test_unknown_role(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        limits = get_policy_limits(<span class="s">"executive"</span>)
+        <span class="k">self</span>.assertEqual(limits, {<span class="s">"role"</span>: <span class="s">"executive"</span>, <span class="s">"known"</span>: <span class="k">False</span>})
+
+
+<span class="k">class</span> EligibilityTests(unittest.TestCase):
+    <span class="k">def</span> test_headphones_are_eligible_for_every_role(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">for</span> employee_id <span class="k">in</span> (<span class="s">"E001"</span>, <span class="s">"E003"</span>, <span class="s">"E004"</span>):
+            result = check_request_eligibility(employee_id, <span class="s">" Headphones "</span>)
+            <span class="k">self</span>.assertTrue(result[<span class="s">"eligible"</span>])
+            <span class="k">self</span>.assertEqual(result[<span class="s">"item"</span>], <span class="s">"headphones"</span>)
+
+    <span class="k">def</span> test_phone_is_eligible_for_every_role(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">for</span> employee_id <span class="k">in</span> (<span class="s">"E005"</span>, <span class="s">"E007"</span>, <span class="s">"E013"</span>):
+            result = check_request_eligibility(employee_id, <span class="s">"phone"</span>)
+            <span class="k">self</span>.assertTrue(result[<span class="s">"eligible"</span>])
+
+    <span class="k">def</span> test_laptop_is_never_eligible(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">for</span> employee_id <span class="k">in</span> (<span class="s">"E010"</span>, <span class="s">"E009"</span>, <span class="s">"E008"</span>):
+            result = check_request_eligibility(employee_id, <span class="s">"laptop"</span>)
+            <span class="k">self</span>.assertFalse(result[<span class="s">"eligible"</span>])
+
+    <span class="k">def</span> test_unknown_item_and_unknown_employee(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertFalse(check_request_eligibility(<span class="s">"E001"</span>, <span class="s">"monitor"</span>)[<span class="s">"eligible"</span>])
+        <span class="k">self</span>.assertFalse(check_request_eligibility(<span class="s">"E999"</span>, <span class="s">"headphones"</span>)[<span class="s">"eligible"</span>])
+
+    <span class="k">def</span> test_does_not_use_equipment_on_file(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        without_headphones = check_request_eligibility(<span class="s">"E011"</span>, <span class="s">"headphones"</span>)
+        with_headphones = check_request_eligibility(<span class="s">"E001"</span>, <span class="s">"headphones"</span>)
+        <span class="k">self</span>.assertTrue(without_headphones[<span class="s">"eligible"</span>])
+        <span class="k">self</span>.assertTrue(with_headphones[<span class="s">"eligible"</span>])
+
+
+<span class="k">class</span> HumanReviewTests(unittest.TestCase):
+    <span class="k">def</span> setUp(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        clear_reviews()
+
+    <span class="k">def</span> test_two_escalations_get_distinct_ids(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        first = flag_for_human_review(<span class="s">"E010"</span>, <span class="s">"laptop"</span>, <span class="s">"I need a laptop for my work."</span>)
+        second = flag_for_human_review(<span class="s">"E004"</span>, <span class="s">"headphones"</span>, <span class="s">"Second pair."</span>)
+        <span class="k">self</span>.assertEqual(first[<span class="s">"status"</span>], <span class="s">"escalated"</span>)
+        <span class="k">self</span>.assertEqual(second[<span class="s">"status"</span>], <span class="s">"escalated"</span>)
+        <span class="k">self</span>.assertNotEqual(first[<span class="s">"review_id"</span>], second[<span class="s">"review_id"</span>])
+        <span class="k">self</span>.assertEqual(first[<span class="s">"employee_id"</span>], <span class="s">"E010"</span>)
+        <span class="k">self</span>.assertEqual(second[<span class="s">"request"</span>], <span class="s">"headphones"</span>)
+
+    <span class="k">def</span> test_blank_fields_are_still_escalated(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        record = flag_for_human_review(<span class="s">"  "</span>, <span class="s">"  "</span>, <span class="s">"  "</span>)
+        <span class="k">self</span>.assertEqual(record[<span class="s">"status"</span>], <span class="s">"escalated"</span>)
+        <span class="k">self</span>.assertEqual(record[<span class="s">"request"</span>], <span class="s">"  "</span>)
+
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    unittest.main()</pre><div class="file">app/src/mcp_client.py — as first committed (c3a3ad7)</div><pre class="code"><span class="s">""</span><span class="s">"Stdio MCP client shared by the hand-check script and, later, the planner and reflector."</span><span class="s">""</span>
+
+<span class="k">import</span> json
+<span class="k">import</span> sys
+<span class="k">from</span> contextlib <span class="k">import</span> asynccontextmanager
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">from</span> typing <span class="k">import</span> Any
+
+<span class="k">import</span> anyio
+<span class="k">from</span> mcp.client.session <span class="k">import</span> ClientSession
+<span class="k">from</span> mcp.client.stdio <span class="k">import</span> StdioServerParameters, stdio_client
+
+SERVER_PATH = Path(__file__).resolve().parent / <span class="s">"server.py"</span>
+
+
+<span class="k">def</span> list_tools() -&gt; list[str]:
+    <span class="s">""</span><span class="s">"Launch the IT server and return the registered tool names."</span><span class="s">""</span>
+    <span class="k">return</span> anyio.run(_list_tools)
+
+
+<span class="k">def</span> call_tool(name: str, arguments: dict[str, Any]) -&gt; Any:
+    <span class="s">""</span><span class="s">"Launch the IT server, call one tool, and return its JSON result."</span><span class="s">""</span>
+    <span class="k">return</span> anyio.run(_call_tool, name, arguments)
+
+
+<span class="k">async</span> <span class="k">def</span> _list_tools() -&gt; list[str]:
+    <span class="k">async</span> <span class="k">with</span> _session() <span class="k">as</span> session:
+        listed = <span class="k">await</span> session.list_tools()
+        <span class="k">return</span> [tool.name <span class="k">for</span> tool <span class="k">in</span> listed.tools]
+
+
+<span class="k">async</span> <span class="k">def</span> _call_tool(name: str, arguments: dict[str, Any]) -&gt; Any:
+    <span class="k">async</span> <span class="k">with</span> _session() <span class="k">as</span> session:
+        result = <span class="k">await</span> session.call_tool(name, arguments)
+        <span class="k">if</span> getattr(result, <span class="s">"is_error"</span>, <span class="k">False</span>):
+            <span class="k">raise</span> RuntimeError(_error_text(result))
+        structured = getattr(result, <span class="s">"structured_content"</span>, <span class="k">None</span>)
+        <span class="k">if</span> structured <span class="k">is</span> <span class="k">not</span> <span class="k">None</span>:
+            <span class="k">return</span> structured
+        <span class="k">return</span> json.loads(_error_text(result))
+
+
+<span class="k">def</span> _error_text(result: Any) -&gt; str:
+    blocks = getattr(result, <span class="s">"content"</span>, <span class="k">None</span>) <span class="k">or</span> []
+    parts: list[str] = []
+    <span class="k">for</span> block <span class="k">in</span> blocks:
+        text = getattr(block, <span class="s">"text"</span>, <span class="k">None</span>)
+        <span class="k">if</span> text:
+            parts.append(text)
+    <span class="k">return</span> <span class="s">"\n"</span>.join(parts) <span class="k">if</span> parts <span class="k">else</span> <span class="s">"tool call failed"</span>
+
+
+@asynccontextmanager
+<span class="k">async</span> <span class="k">def</span> _session():
+    parameters = StdioServerParameters(
+        command=sys.executable,
+        args=[str(SERVER_PATH)],
+    )
+    <span class="k">async</span> <span class="k">with</span> stdio_client(parameters) <span class="k">as</span> streams:
+        <span class="k">async</span> <span class="k">with</span> ClientSession(streams[0], streams[1]) <span class="k">as</span> session:
+            <span class="k">await</span> session.initialize()
+            <span class="k">yield</span> session</pre><div class="file">app/scripts/call_tool.py — as first committed (c3a3ad7)</div><pre class="code"><span class="s">""</span><span class="s">"Call one Internal IT tool over stdio and print the JSON result."</span><span class="s">""</span>
+
+<span class="k">import</span> json
+<span class="k">import</span> sys
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+SRC = Path(__file__).resolve().parents[1] / <span class="s">"src"</span>
+sys.path.insert(0, str(SRC))
+
+<span class="k">from</span> mcp_client <span class="k">import</span> call_tool
+
+
+<span class="k">def</span> main() -&gt; <span class="k">None</span>:
+    <span class="k">if</span> len(sys.argv) &lt; 2:
+        <span class="k">raise</span> SystemExit(<span class="s">"usage: call_tool.py &lt;tool-name&gt; '&lt;json-arguments&gt;'"</span>)
+    name = sys.argv[1]
+    arguments = json.loads(sys.argv[2]) <span class="k">if</span> len(sys.argv) &gt; 2 <span class="k">else</span> {}
+    json.dump(call_tool(name, arguments), sys.stdout, indent=2)
+    sys.stdout.write(<span class="s">"\n"</span>)
+
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    main()</pre></section><section><h2>3. MCP server code (all five tools)</h2><div class="note">Server and tool sources. Every module, class, and function carries a docstring (294 of 294 by AST count); policy lives in the deterministic evaluate_request register, never in the model.</div><div class="file">app/src/server.py</div><pre class="code"><span class="s">""</span><span class="s">"MCP server for the Internal IT Service: registers the five request tools."</span><span class="s">""</span>
 
 <span class="k">from</span> mcp.server <span class="k">import</span> MCPServer
 <span class="k">from</span> mcp_types <span class="k">import</span> ToolAnnotations

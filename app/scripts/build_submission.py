@@ -6,6 +6,7 @@ prints it to submission.pdf with headless Edge.
     uv run python app/scripts/build_submission.py
 """
 
+import ast
 import html
 import re
 import subprocess
@@ -65,6 +66,34 @@ def doc_block(source: str) -> str:
 def file_label(rel: str) -> str:
     """Render the repo-relative path shown above a block."""
     return f'<div class="file">{html.escape(rel)}</div>'
+
+
+COMMIT_SETUP = "dc17847"
+COMMIT_TOOLS = "c3a3ad7"
+
+
+def committed(rel: str, sha: str) -> str:
+    """Render one file as it existed in an early commit, before the agent."""
+    source = subprocess.run(
+        ["git", "show", f"{sha}:{rel}"], capture_output=True, text=True, check=True, cwd=ROOT
+    ).stdout.rstrip()
+    lang = rel.rsplit(".", 1)[-1]
+    label = f"{rel} — as first committed ({sha[:7]})"
+    return f'<div class="file">{html.escape(label)}</div>' + code_block(source, lang)
+
+
+def docstring_count() -> tuple[int, int]:
+    """Count documented modules, classes, and functions across the package."""
+    total = documented = 0
+    for root in ("app/src", "app/scripts", "app/tests", "examples"):
+        for py in (ROOT / root).rglob("*.py"):
+            tree = ast.parse(py.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+                    total += 1
+                    if ast.get_docstring(node):
+                        documented += 1
+    return documented, total
 
 
 def item(kind: str, rel: str) -> str:
@@ -180,14 +209,25 @@ def build_html() -> str:
         + item("code", "examples/minimal_server.py")
         + item("code", "examples/minimal_client.py")
         + item("term", "demo/outputs/minimal-server.txt")
-        + '<div class="note">Build order evidence, from the repo history: the setup and the tested plain-function decision tool landed first, then this minimal server/client plumbing, then the agent four minutes later (Suggested Approach steps 1&ndash;4 before step 5). The same log records the docstring passes; the scan below counts the coverage.</div>'
-        + item("term", "demo/outputs/build-order.txt")
+        + '<div class="note">The code below is the repository as it existed in the first two commits, before the agent was built: the basic server skeleton first, then the four tools as plain functions over self-generated mock data, their unit tests, and the client used to confirm connectivity.</div>'
+        + committed("app/src/server.py", COMMIT_SETUP)
+        + committed("app/src/tools/data_store.py", COMMIT_TOOLS)
+        + committed("app/data/employees.json", COMMIT_TOOLS)
+        + committed("app/data/policy_limits.json", COMMIT_TOOLS)
+        + committed("app/src/tools/employee_info.py", COMMIT_TOOLS)
+        + committed("app/src/tools/policy_limits.py", COMMIT_TOOLS)
+        + committed("app/src/tools/eligibility.py", COMMIT_TOOLS)
+        + committed("app/src/tools/human_review.py", COMMIT_TOOLS)
+        + committed("app/tests/test_tools.py", COMMIT_TOOLS)
+        + committed("app/src/mcp_client.py", COMMIT_TOOLS)
+        + committed("app/scripts/call_tool.py", COMMIT_TOOLS)
     )
     p.append(section(2, "Minimal one-tool server and client connection", body2))
 
     # 3 MCP server code
+    documented, definitions = docstring_count()
     body3 = (
-        '<div class="note">Server and tool sources. Every module, class, and function carries a docstring (292 of 292, counted in section 2); policy lives in the deterministic evaluate_request register, never in the model.</div>'
+        f'<div class="note">Server and tool sources. Every module, class, and function carries a docstring ({documented} of {definitions} by AST count); policy lives in the deterministic evaluate_request register, never in the model.</div>'
         + item("code", "app/src/server.py")
         + item("code", "app/src/tools/employee_info.py")
         + item("code", "app/src/tools/policy_limits.py")
