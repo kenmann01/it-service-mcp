@@ -29,18 +29,14 @@ def read(rel: str) -> str:
 def highlight_python(code: str) -> str:
     out = []
     for line in code.splitlines():
-        escaped = html.escape(line)
+        escaped = html.escape(line, quote=False)
         parts = re.split(r"(#.*$)", escaped, maxsplit=1)
         tokens = []
         for i, part in enumerate(parts):
             if i == 1:
                 tokens.append(f'<span class="c">{part}</span>')
                 continue
-            part = re.sub(
-                r'(&quot;.*?&quot;|&#x27;.*?&#x27;|".*?"|\'.*?\')',
-                r'<span class="s">\1</span>',
-                part,
-            )
+            part = re.sub(r'(".*?"|\'.*?\')', r'<span class="s">\1</span>', part)
             for kw in KEYWORDS:
                 part = re.sub(rf"\b({kw})\b(?![^<]*</span>)", r'<span class="k">\1</span>', part)
             tokens.append(part)
@@ -132,7 +128,7 @@ pre.doc { background: #fffdf5; border: 1px solid #e3dcc3; white-space: pre-wrap;
 pre.code .k { color: #cf222e; font-weight: 600; }
 pre.code .s { color: #0a3069; }
 pre.code .c { color: #6e7781; font-style: italic; }
-.file { font-family: Consolas, monospace; font-size: 9pt; color: #1f6feb; margin: 12px 0 0; }
+.file { font-family: Consolas, monospace; font-size: 9pt; color: #1f6feb; margin: 12px 0 0; page-break-after: avoid; break-after: avoid; }
 .note { font-size: 10pt; color: #444; margin: 8px 0 2px; }
 """
 

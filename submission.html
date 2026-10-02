@@ -1,0 +1,1770 @@
+<html><head><meta charset='utf-8'><style>
+@page { size: A4; margin: 16mm 15mm; }
+* { box-sizing: border-box; }
+body { font-family: 'Segoe UI', Arial, sans-serif; color: #111; margin: 0; }
+.cover { height: 252mm; display: flex; flex-direction: column; justify-content: center; }
+.cover h1 { font-size: 29pt; margin: 0 0 8px; }
+.cover .sub { font-size: 13pt; color: #555; margin-bottom: 34px; }
+.cover table { border-collapse: collapse; font-size: 11pt; }
+.cover td { padding: 4px 14px 4px 0; vertical-align: top; }
+.cover td:first-child { color: #777; white-space: nowrap; }
+h2 { font-size: 15.5pt; border-bottom: 2.5px solid #1f6feb; padding-bottom: 5px; margin: 0 0 14px; }
+section { page-break-before: always; }
+pre { margin: 8px 0 14px; padding: 10px 12px; border-radius: 6px; font-size: 8.1pt; line-height: 1.38; }
+pre.term { background: #0d1117; color: #e6edf3; white-space: pre-wrap; word-break: break-word; font-family: Consolas, 'Courier New', monospace; }
+pre.code { background: #f6f8fa; border: 1px solid #d0d7de; white-space: pre-wrap; word-break: break-word; font-family: Consolas, 'Courier New', monospace; }
+pre.doc { background: #fffdf5; border: 1px solid #e3dcc3; white-space: pre-wrap; word-break: break-word; font-family: Consolas, 'Courier New', monospace; font-size: 8.4pt; }
+pre.code .k { color: #cf222e; font-weight: 600; }
+pre.code .s { color: #0a3069; }
+pre.code .c { color: #6e7781; font-style: italic; }
+.file { font-family: Consolas, monospace; font-size: 9pt; color: #1f6feb; margin: 12px 0 0; page-break-after: avoid; break-after: avoid; }
+.note { font-size: 10pt; color: #444; margin: 8px 0 2px; }
+</style></head><body><div class="cover"><h1>IT Equipment Request Handler</h1><div class="sub">Week 7 Lab &middot; MCP Server + ReAct Agent &middot; Submission</div><table><tr><td>Repo</td><td>github.com/kenmann01/it-service-mcp, branch feat/agent-react</td></tr><tr><td>Stack</td><td>Python 3.12+, MCP Python SDK v2 (stdio), Ollama qwen3:8b, uv, pytest</td></tr><tr><td>Policy</td><td>16-rule deterministic procedure in evaluate_request: approve / deny / escalate</td></tr><tr><td>Agent</td><td>Planner &rarr; TAO (Thought / Action / Observation) &rarr; Reflector, with explicit routing</td></tr></table></div><section><h2>1. Requirements doc and policy rules</h2><div class="file">docs/requirements.md</div><pre class="doc"># Equipment request policy
+
+This document is the only source of truth for an equipment request. Decide each request by the procedure below. Do not add rules about monitors, refresh cycles, years between replacements, cost, or inventory. The decisions are `approve`, `deny`, and `escalate`. `approve` when the policy clearly covers the request. `deny` when the policy clearly does not cover it. `escalate` when the request is ambiguous or missing information, so a human decides.
+
+## Request
+
+Every field is a string. A missing field, or a field that is empty or only spaces after trimming, is blank.
+
+```json
+{
+  &quot;employee&quot;: &quot;name&quot;,
+  &quot;role&quot;: &quot;role&quot;,
+  &quot;item_requested&quot;: &quot;item&quot;,
+  &quot;reason&quot;: &quot;the reason&quot;
+}
+```
+
+Before any rule, trim spaces and compare `role` and `item_requested` in lowercase.
+
+Allowed roles:
+
+- `employee`
+- `manager`
+- `director` (this value means anyone above manager; the field must already say `director`)
+
+Allowed items:
+
+- `headphones`
+- `phone`
+- `laptop`
+
+Any other role string or item string is not allowed. Do not map synonyms. `headset`, `mobile`, `laptop computer`, `vp`, and `executive` do not match.
+
+## Reason class
+
+Classify `reason` in lowercase. Use the first class that matches.
+
+1. `week_overlap` when the reason has all three of these:
+   - `keep both` or `both laptops`
+   - `week` or `7 days`
+   - `return`
+2. `unclear` when the reason has both a second-item signal and a first-item signal.
+3. `second` when the reason has any second-item signal: `second`, `spare`, `additional`, `another`, `extra`, `already have`.
+4. `first` when the reason has any first-item signal: `first`, `do not have`, `don&#x27;t have`, `not have one yet`.
+5. `replacement` when the reason has any replacement signal: `replacement`, `replace`, `replacing`, `broken`, `broke`, `lost`, `stolen`, `worn out`, `stopped working`.
+6. `unclear` when none of the above match.
+
+`week_overlap` wins over `replacement`. A reason that says both &quot;replacing&quot; and &quot;keep both for a week before returning&quot; is `week_overlap`.
+
+## Decision procedure
+
+Apply the first matching rule. Stop there.
+
+1. Any required field is blank. Decision: `escalate`. Rule: `blank_field`.
+2. Role is not `employee`, `manager`, or `director`. Decision: `escalate`. Rule: `unknown_role`.
+3. Item is not `headphones`, `phone`, or `laptop`. Decision: `escalate`. Rule: `unknown_item`.
+4. Item is `laptop` and role is `employee`. Decision: `deny`. Rule: `employee_laptop`. The policy does not cover employee laptops, whatever the reason says.
+5. Item is `laptop`, role is `manager` or `director`, and the reason class is `week_overlap`. Decision: `escalate`. Rule: `laptop_week_overlap`. Keeping both laptops for a week and then returning the old one to IT is a human decision.
+6. Item is `laptop` and role is `manager` or `director`, for every other reason class. Decision: `deny`. Rule: `laptop_not_covered`. No laptop request is approved.
+7. Item is `headphones`, role is `employee`, `manager`, or `director`, and the reason class is `replacement`. Decision: `approve`. Rule: `headphones_replacement`.
+8. Item is `headphones`, role is `employee`, `manager`, or `director`, and the reason class is `first`. Decision: `approve`. Rule: `headphones_first`.
+9. Item is `headphones` and the reason class is `second`. Decision: `deny`. Rule: `headphones_second`. A spare pair while they keep the current ones is not approved.
+10. Item is `phone`, role is `employee`, and the reason class is `replacement`. Decision: `approve`. Rule: `employee_phone_replacement`.
+11. Item is `phone`, role is `employee`, and the reason class is `first`. Decision: `escalate`. Rule: `employee_phone_first`. An employee is approved only for a phone replacement; whether to grant a first company phone is a human decision.
+12. Item is `phone`, role is `employee`, and the reason class is `second`. Decision: `deny`. Rule: `employee_phone_second`. An extra phone for an employee is not approved.
+13. Item is `phone`, role is `manager` or `director`, and the reason class is `replacement`. Decision: `approve`. Rule: `manager_phone_replacement`.
+14. Item is `phone`, role is `manager` or `director`, and the reason class is `first`. Decision: `approve`. Rule: `manager_phone_first`.
+15. Item is `phone`, role is `manager` or `director`, and the reason class is `second`. Decision: `deny`. Rule: `manager_phone_second`. A second phone while they already have one is not approved.
+16. Item is `headphones` or `phone` and the reason class is `unclear` or `week_overlap`. Decision: `escalate`. Rule: `unclear_reason`.
+
+There is no later step. Steps 1 through 16 cover every request.
+
+## Result
+
+Return only this object:
+
+```json
+{
+  &quot;decision&quot;: &quot;approve&quot;,
+  &quot;rule&quot;: &quot;headphones_replacement&quot;
+}
+```
+
+`decision` is `approve`, `deny`, or `escalate`. `rule` is the rule id from the step that matched.</pre><div class="file">docs/policy.md</div><pre class="doc"># Equipment request policy
+
+This policy says which equipment requests are approved, which are denied, and which are sent to IT for a decision. It covers headphones, phones, and laptops.
+
+To submit a request, give your name, your role, the item, and the reason. Roles are employee, manager, and director. Director means anyone above manager.
+
+An approved request is issued under the rule below. A denied request is refused by this policy; the rule below says why. An escalated request is not approved and not refused by this policy. IT reviews it.
+
+## Headphones
+
+Every employee, manager, and director may request headphones.
+
+- A replacement for the pair you have is approved.
+- A first pair, when you do not have headphones yet, is approved.
+- A second or spare pair, while you keep the pair you already have, is denied.
+
+## Phones
+
+Employees may request a replacement for a company phone they already have. That replacement is approved. Any other phone request from an employee is not approved: a first company phone is escalated, and an extra phone is denied.
+
+Managers and directors may request one company phone.
+
+- A replacement for the phone you have is approved.
+- A first company phone, when you do not have one yet, is approved.
+- A second phone, when you already have one, is denied.
+
+## Laptops
+
+A laptop request is denied. This policy does not approve laptops.
+
+- A manager or director who asks to keep the new laptop and the old one for a week, and then return the old one to IT, is escalated. Keeping both laptops is a human decision.
+- An employee who asks for a laptop is denied. This policy does not say what an employee may have.
+- Any other laptop request from a manager or director is denied.
+
+## Requests this policy does not cover
+
+IT escalates a request when any of the following is true.
+
+- Your name, role, item, or reason is missing.
+- Your role is not employee, manager, or director.
+- The item is not headphones, a phone, or a laptop.
+- A headphones or phone request does not say whether it is a replacement, a first one, or a second one.</pre></section><section><h2>2. Minimal one-tool server and client connection</h2><div class="note">The simplest possible server (one trivial tool), then a client that connects, lists tools, and calls it. Captured terminal output below the sources.</div><div class="file">examples/minimal_server.py</div><pre class="code"><span class="s">""</span>"The simplest possible MCP server: one trivial tool, no business logic.
+
+This <span class="k">is</span> the suggested-approach step 1 artifact: prove the SDK installs, the
+server starts, <span class="k">and</span> the tool registers, before any real business logic exists.
+<span class="s">""</span>"
+
+<span class="k">from</span> mcp.server <span class="k">import</span> MCPServer
+<span class="k">from</span> mcp_types <span class="k">import</span> ToolAnnotations
+
+mcp = MCPServer(<span class="s">"Minimal Example"</span>)
+
+_READ_ONLY = ToolAnnotations(read_only_hint=<span class="k">True</span>)
+
+
+<span class="k">def</span> ping() -&gt; str:
+    <span class="s">""</span><span class="s">"Return pong."</span><span class="s">""</span>
+    <span class="k">return</span> <span class="s">"pong"</span>
+
+
+mcp.tool(annotations=_READ_ONLY)(ping)
+
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    mcp.run()</pre><div class="file">examples/minimal_client.py</div><pre class="code"><span class="s">""</span>"Minimal MCP client: connects to minimal_server.py, lists tools, calls one.
+
+This <span class="k">is</span> the suggested-approach step 3 artifact: proof that the plumbing works
+end to end before the real tools are built.
+<span class="s">""</span>"
+
+<span class="k">import</span> sys
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+<span class="k">import</span> anyio
+<span class="k">from</span> mcp.client.session <span class="k">import</span> ClientSession
+<span class="k">from</span> mcp.client.stdio <span class="k">import</span> StdioServerParameters, stdio_client
+
+SERVER = Path(__file__).resolve().parent / <span class="s">"minimal_server.py"</span>
+
+
+<span class="k">async</span> <span class="k">def</span> main() -&gt; <span class="k">None</span>:
+    parameters = StdioServerParameters(command=sys.executable, args=[str(SERVER)])
+    print(f<span class="s">"Connecting to {SERVER.name} over stdio..."</span>)
+    <span class="k">async</span> <span class="k">with</span> stdio_client(parameters) <span class="k">as</span> streams:
+        <span class="k">async</span> <span class="k">with</span> ClientSession(streams[0], streams[1]) <span class="k">as</span> session:
+            <span class="k">await</span> session.initialize()
+            listed = <span class="k">await</span> session.list_tools()
+            names = [tool.name <span class="k">for</span> tool <span class="k">in</span> listed.tools]
+            print(f<span class="s">"Registered tools: {names}"</span>)
+            print(<span class="s">"Calling ping()..."</span>)
+            result = <span class="k">await</span> session.call_tool(<span class="s">"ping"</span>, {})
+            print(f<span class="s">"ping() -&gt; {result.content[0].text}"</span>)
+
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    anyio.run(main)</pre><div class="file">demo/outputs/minimal-server.txt</div><pre class="term">Connecting to minimal_server.py over stdio...
+Registered tools: [&#x27;ping&#x27;]
+Calling ping()...
+ping() -&gt; pong</pre></section><section><h2>3. MCP server code (all five tools)</h2><div class="file">app/src/server.py</div><pre class="code"><span class="k">from</span> mcp.server <span class="k">import</span> MCPServer
+<span class="k">from</span> mcp_types <span class="k">import</span> ToolAnnotations
+
+<span class="k">from</span> tools.decision <span class="k">import</span> evaluate_request
+<span class="k">from</span> tools.eligibility <span class="k">import</span> check_request_eligibility
+<span class="k">from</span> tools.employee_info <span class="k">import</span> get_employee_info
+<span class="k">from</span> tools.human_review <span class="k">import</span> flag_for_human_review
+<span class="k">from</span> tools.policy_limits <span class="k">import</span> get_policy_limits
+
+mcp = MCPServer(<span class="s">"Internal IT Service"</span>)
+
+_READ_ONLY = ToolAnnotations(read_only_hint=<span class="k">True</span>)
+_ESCALATE = ToolAnnotations(read_only_hint=<span class="k">False</span>, destructive_hint=<span class="k">False</span>)
+
+mcp.tool(annotations=_READ_ONLY)(get_employee_info)
+mcp.tool(annotations=_READ_ONLY)(get_policy_limits)
+mcp.tool(annotations=_READ_ONLY)(check_request_eligibility)
+mcp.tool(annotations=_READ_ONLY)(evaluate_request)
+mcp.tool(annotations=_ESCALATE)(flag_for_human_review)
+
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    mcp.run()</pre><div class="file">app/src/tools/employee_info.py</div><pre class="code"><span class="s">""</span><span class="s">"Look up role, tenure, and equipment for one employee."</span><span class="s">""</span>
+
+<span class="k">from</span> typing <span class="k">import</span> NotRequired, TypedDict
+
+<span class="k">from</span> tools.data_store <span class="k">import</span> load_employees
+
+
+<span class="k">class</span> EmployeeInfo(TypedDict):
+    found: bool
+    employee_id: str
+    name: NotRequired[str]
+    role: NotRequired[str]
+    tenure_years: NotRequired[int]
+    equipment: NotRequired[list[str]]
+
+
+<span class="k">def</span> get_employee_info(employee_id: str) -&gt; EmployeeInfo:
+    <span class="s">""</span><span class="s">"Return role, tenure, and current equipment on file for an employee."</span><span class="s">""</span>
+    key = employee_id.strip()
+    <span class="k">for</span> employee <span class="k">in</span> load_employees():
+        <span class="k">if</span> employee[<span class="s">"employee_id"</span>] == key:
+            <span class="k">return</span> {
+                <span class="s">"found"</span>: <span class="k">True</span>,
+                <span class="s">"employee_id"</span>: employee[<span class="s">"employee_id"</span>],
+                <span class="s">"name"</span>: employee[<span class="s">"name"</span>],
+                <span class="s">"role"</span>: employee[<span class="s">"role"</span>],
+                <span class="s">"tenure_years"</span>: employee[<span class="s">"tenure_years"</span>],
+                <span class="s">"equipment"</span>: list(employee[<span class="s">"equipment"</span>]),
+            }
+    <span class="k">return</span> {<span class="s">"found"</span>: <span class="k">False</span>, <span class="s">"employee_id"</span>: key}</pre><div class="file">app/src/tools/policy_limits.py</div><pre class="code"><span class="s">""</span><span class="s">"Role eligibility and the period that covers each item."</span><span class="s">""</span>
+
+<span class="k">from</span> typing <span class="k">import</span> NotRequired, TypedDict
+
+<span class="k">from</span> tools.data_store <span class="k">import</span> load_policy_limits
+
+
+<span class="k">class</span> ItemLimit(TypedDict):
+    eligible: bool
+    period: str
+
+
+<span class="k">class</span> PolicyLimits(TypedDict):
+    role: str
+    known: bool
+    eligible_for: NotRequired[list[str]]
+    items: NotRequired[dict[str, ItemLimit]]
+
+
+<span class="k">def</span> get_policy_limits(role: str) -&gt; PolicyLimits:
+    <span class="s">""</span><span class="s">"Return what a role is eligible for and the period for each item."</span><span class="s">""</span>
+    key = role.strip().lower()
+    limits = load_policy_limits()
+    <span class="k">if</span> key <span class="k">not</span> <span class="k">in</span> limits:
+        <span class="k">return</span> {<span class="s">"role"</span>: key, <span class="s">"known"</span>: <span class="k">False</span>}
+    items: dict[str, ItemLimit] = limits[key]
+    eligible_for = [item <span class="k">for</span> item, rule <span class="k">in</span> items.items() <span class="k">if</span> rule[<span class="s">"eligible"</span>]]
+    <span class="k">return</span> {
+        <span class="s">"role"</span>: key,
+        <span class="s">"known"</span>: <span class="k">True</span>,
+        <span class="s">"eligible_for"</span>: eligible_for,
+        <span class="s">"items"</span>: items,
+    }</pre><div class="file">app/src/tools/eligibility.py</div><pre class="code"><span class="s">""</span><span class="s">"Whether a role may receive an item under at least one covered reason."</span><span class="s">""</span>
+
+<span class="k">from</span> typing <span class="k">import</span> TypedDict
+
+<span class="k">from</span> tools.employee_info <span class="k">import</span> get_employee_info
+<span class="k">from</span> tools.policy_limits <span class="k">import</span> get_policy_limits
+
+
+<span class="k">class</span> Eligibility(TypedDict):
+    employee_id: str
+    item: str
+    eligible: bool
+
+
+<span class="k">def</span> check_request_eligibility(employee_id: str, item: str) -&gt; Eligibility:
+    <span class="s">""</span>"Return whether this employee's role may request this item under policy.
+
+    <span class="k">True</span> only when the role <span class="k">is</span> covered <span class="k">for</span> the item under at least one reason
+    <span class="k">class</span>. A laptop, an unknown item, <span class="k">or</span> an unknown employee <span class="k">is</span> <span class="k">not</span> eligible.
+    Equipment already on file <span class="k">is</span> <span class="k">not</span> consulted, <span class="k">and</span> the reason text <span class="k">is</span> <span class="k">not</span>
+    classified here.
+    <span class="s">""</span>"
+    info = get_employee_info(employee_id)
+    normalized = item.strip().lower()
+    <span class="k">if</span> <span class="k">not</span> info[<span class="s">"found"</span>]:
+        <span class="k">return</span> {<span class="s">"employee_id"</span>: info[<span class="s">"employee_id"</span>], <span class="s">"item"</span>: normalized, <span class="s">"eligible"</span>: <span class="k">False</span>}
+    limits = get_policy_limits(info[<span class="s">"role"</span>])
+    items = limits.get(<span class="s">"items"</span>) <span class="k">or</span> {}
+    rule = items.get(normalized)
+    eligible = bool(limits[<span class="s">"known"</span>] <span class="k">and</span> rule <span class="k">is</span> <span class="k">not</span> <span class="k">None</span> <span class="k">and</span> rule[<span class="s">"eligible"</span>])
+    <span class="k">return</span> {<span class="s">"employee_id"</span>: info[<span class="s">"employee_id"</span>], <span class="s">"item"</span>: normalized, <span class="s">"eligible"</span>: eligible}</pre><div class="file">app/src/tools/decision.py</div><pre class="code"><span class="s">""</span>"The 16-rule decision procedure <span class="k">from</span> docs/requirements.md, <span class="k">as</span> pure functions.
+
+The request <span class="k">is</span> consumed exactly <span class="k">as</span> submitted: the claimed role <span class="k">is</span> <span class="k">not</span>
+cross-checked against employee data, <span class="k">and</span> equipment on file <span class="k">is</span> <span class="k">not</span> consulted.
+<span class="s">""</span>"
+
+<span class="k">from</span> typing <span class="k">import</span> TypedDict
+
+ROLES = (<span class="s">"employee"</span>, <span class="s">"manager"</span>, <span class="s">"director"</span>)
+ITEMS = (<span class="s">"headphones"</span>, <span class="s">"phone"</span>, <span class="s">"laptop"</span>)
+
+_WEEK_OVERLAP_SIGNALS = (<span class="s">"keep both"</span>, <span class="s">"both laptops"</span>)
+_WEEK_SIGNALS = (<span class="s">"week"</span>, <span class="s">"7 days"</span>)
+_RETURN_SIGNALS = (<span class="s">"return"</span>,)
+_SECOND_SIGNALS = (<span class="s">"second"</span>, <span class="s">"spare"</span>, <span class="s">"additional"</span>, <span class="s">"another"</span>, <span class="s">"extra"</span>, <span class="s">"already have"</span>)
+_FIRST_SIGNALS = (<span class="s">"first"</span>, <span class="s">"do not have"</span>, <span class="s">"don't have"</span>, <span class="s">"not have one yet"</span>)
+_REPLACEMENT_SIGNALS = (
+    <span class="s">"replacement"</span>,
+    <span class="s">"replace"</span>,
+    <span class="s">"replacing"</span>,
+    <span class="s">"broken"</span>,
+    <span class="s">"broke"</span>,
+    <span class="s">"lost"</span>,
+    <span class="s">"stolen"</span>,
+    <span class="s">"worn out"</span>,
+    <span class="s">"stopped working"</span>,
+)
+
+
+<span class="k">class</span> Decision(TypedDict):
+    decision: str
+    rule: str
+
+
+<span class="k">def</span> classify_reason(reason: str) -&gt; str:
+    <span class="s">""</span><span class="s">"Return the reason class: the first of the spec's classes that matches."</span><span class="s">""</span>
+    text = reason.strip().lower()
+    overlap = any(s <span class="k">in</span> text <span class="k">for</span> s <span class="k">in</span> _WEEK_OVERLAP_SIGNALS)
+    week = any(s <span class="k">in</span> text <span class="k">for</span> s <span class="k">in</span> _WEEK_SIGNALS)
+    returns = any(s <span class="k">in</span> text <span class="k">for</span> s <span class="k">in</span> _RETURN_SIGNALS)
+    <span class="k">if</span> overlap <span class="k">and</span> week <span class="k">and</span> returns:
+        <span class="k">return</span> <span class="s">"week_overlap"</span>
+    has_second = any(s <span class="k">in</span> text <span class="k">for</span> s <span class="k">in</span> _SECOND_SIGNALS)
+    has_first = any(s <span class="k">in</span> text <span class="k">for</span> s <span class="k">in</span> _FIRST_SIGNALS)
+    <span class="k">if</span> has_second <span class="k">and</span> has_first:
+        <span class="k">return</span> <span class="s">"unclear"</span>
+    <span class="k">if</span> has_second:
+        <span class="k">return</span> <span class="s">"second"</span>
+    <span class="k">if</span> has_first:
+        <span class="k">return</span> <span class="s">"first"</span>
+    <span class="k">if</span> any(s <span class="k">in</span> text <span class="k">for</span> s <span class="k">in</span> _REPLACEMENT_SIGNALS):
+        <span class="k">return</span> <span class="s">"replacement"</span>
+    <span class="k">return</span> <span class="s">"unclear"</span>
+
+
+<span class="k">def</span> _blank(*fields: str) -&gt; bool:
+    <span class="k">return</span> any(<span class="k">not</span> str(field).strip() <span class="k">for</span> field <span class="k">in</span> fields)
+
+
+<span class="k">def</span> evaluate_request(employee: str, role: str, item_requested: str, reason: str) -&gt; Decision:
+    <span class="s">""</span>"Apply the 16-rule first-match procedure to one request.
+
+    Returns {<span class="s">"decision"</span>: <span class="s">"approve"</span>|<span class="s">"deny"</span>|<span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"&lt;id&gt;"</span>}. An
+    `escalate` decision means a human should decide; call flag_for_human_review.
+    <span class="s">""</span>"
+    <span class="k">if</span> _blank(employee, role, item_requested, reason):
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"blank_field"</span>}
+
+    normalized_role = role.strip().lower()
+    normalized_item = item_requested.strip().lower()
+    <span class="k">if</span> normalized_role <span class="k">not</span> <span class="k">in</span> ROLES:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"unknown_role"</span>}
+    <span class="k">if</span> normalized_item <span class="k">not</span> <span class="k">in</span> ITEMS:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"unknown_item"</span>}
+
+    reason_class = classify_reason(reason)
+    laptop = normalized_item == <span class="s">"laptop"</span>
+    phone = normalized_item == <span class="s">"phone"</span>
+    headphones = normalized_item == <span class="s">"headphones"</span>
+    staff = normalized_role <span class="k">in</span> (<span class="s">"manager"</span>, <span class="s">"director"</span>)
+
+    <span class="k">if</span> laptop <span class="k">and</span> normalized_role == <span class="s">"employee"</span>:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"deny"</span>, <span class="s">"rule"</span>: <span class="s">"employee_laptop"</span>}
+    <span class="k">if</span> laptop <span class="k">and</span> staff <span class="k">and</span> reason_class == <span class="s">"week_overlap"</span>:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"laptop_week_overlap"</span>}
+    <span class="k">if</span> laptop:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"deny"</span>, <span class="s">"rule"</span>: <span class="s">"laptop_not_covered"</span>}
+
+    <span class="k">if</span> headphones <span class="k">and</span> reason_class == <span class="s">"replacement"</span>:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"approve"</span>, <span class="s">"rule"</span>: <span class="s">"headphones_replacement"</span>}
+    <span class="k">if</span> headphones <span class="k">and</span> reason_class == <span class="s">"first"</span>:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"approve"</span>, <span class="s">"rule"</span>: <span class="s">"headphones_first"</span>}
+    <span class="k">if</span> headphones <span class="k">and</span> reason_class == <span class="s">"second"</span>:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"deny"</span>, <span class="s">"rule"</span>: <span class="s">"headphones_second"</span>}
+
+    <span class="k">if</span> phone <span class="k">and</span> normalized_role == <span class="s">"employee"</span> <span class="k">and</span> reason_class == <span class="s">"replacement"</span>:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"approve"</span>, <span class="s">"rule"</span>: <span class="s">"employee_phone_replacement"</span>}
+    <span class="k">if</span> phone <span class="k">and</span> normalized_role == <span class="s">"employee"</span> <span class="k">and</span> reason_class == <span class="s">"first"</span>:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"employee_phone_first"</span>}
+    <span class="k">if</span> phone <span class="k">and</span> normalized_role == <span class="s">"employee"</span> <span class="k">and</span> reason_class == <span class="s">"second"</span>:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"deny"</span>, <span class="s">"rule"</span>: <span class="s">"employee_phone_second"</span>}
+    <span class="k">if</span> phone <span class="k">and</span> staff <span class="k">and</span> reason_class == <span class="s">"replacement"</span>:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"approve"</span>, <span class="s">"rule"</span>: <span class="s">"manager_phone_replacement"</span>}
+    <span class="k">if</span> phone <span class="k">and</span> staff <span class="k">and</span> reason_class == <span class="s">"first"</span>:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"approve"</span>, <span class="s">"rule"</span>: <span class="s">"manager_phone_first"</span>}
+    <span class="k">if</span> phone <span class="k">and</span> staff <span class="k">and</span> reason_class == <span class="s">"second"</span>:
+        <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"deny"</span>, <span class="s">"rule"</span>: <span class="s">"manager_phone_second"</span>}
+
+    <span class="c"># Rule 16: headphones or phone with an unclear or week_overlap reason class.</span>
+    <span class="k">return</span> {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"unclear_reason"</span>}</pre><div class="file">app/src/tools/human_review.py</div><pre class="code"><span class="s">""</span><span class="s">"Process-local queue of requests escalated for a person to review."</span><span class="s">""</span>
+
+<span class="k">from</span> typing <span class="k">import</span> TypedDict
+
+_reviews: list[<span class="s">"ReviewRecord"</span>] = []
+
+
+<span class="k">class</span> ReviewRecord(TypedDict):
+    review_id: str
+    employee_id: str
+    request: str
+    reason: str
+    status: str
+
+
+<span class="k">def</span> flag_for_human_review(employee_id: str, request: str, reason: str) -&gt; ReviewRecord:
+    <span class="s">""</span><span class="s">"Escalate a request for human review. This records the request and never approves it."</span><span class="s">""</span>
+    record: ReviewRecord = {
+        <span class="s">"review_id"</span>: f<span class="s">"R{len(_reviews) + 1:03d}"</span>,
+        <span class="s">"employee_id"</span>: employee_id,
+        <span class="s">"request"</span>: request,
+        <span class="s">"reason"</span>: reason,
+        <span class="s">"status"</span>: <span class="s">"escalated"</span>,
+    }
+    _reviews.append(record)
+    <span class="k">return</span> record
+
+
+<span class="k">def</span> pending_reviews() -&gt; list[ReviewRecord]:
+    <span class="k">return</span> list(_reviews)
+
+
+<span class="k">def</span> clear_reviews() -&gt; <span class="k">None</span>:
+    _reviews.clear()</pre><div class="file">app/src/tools/data_store.py</div><pre class="code"><span class="s">""</span><span class="s">"Load the synthetic employee and policy JSON used by the IT tools."</span><span class="s">""</span>
+
+<span class="k">import</span> json
+<span class="k">from</span> functools <span class="k">import</span> lru_cache
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">from</span> typing <span class="k">import</span> Any
+
+DATA_DIR = Path(__file__).resolve().parents[2] / <span class="s">"data"</span>
+
+
+@lru_cache(maxsize=1)
+<span class="k">def</span> load_employees() -&gt; tuple[dict[str, Any], ...]:
+    payload = json.loads((DATA_DIR / <span class="s">"employees.json"</span>).read_text(encoding=<span class="s">"utf-8"</span>))
+    <span class="k">return</span> tuple(payload[<span class="s">"employees"</span>])
+
+
+@lru_cache(maxsize=1)
+<span class="k">def</span> load_policy_limits() -&gt; dict[str, Any]:
+    <span class="k">return</span> json.loads((DATA_DIR / <span class="s">"policy_limits.json"</span>).read_text(encoding=<span class="s">"utf-8"</span>))</pre></section><section><h2>4. Unit tests and passing run</h2><div class="file">app/tests/test_tools.py</div><pre class="code"><span class="s">""</span><span class="s">"Isolated checks of the IT tools against the JSON mock data. No MCP transport."</span><span class="s">""</span>
+
+<span class="k">import</span> sys
+<span class="k">import</span> unittest
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / <span class="s">"src"</span>))
+
+<span class="k">from</span> tools.eligibility <span class="k">import</span> check_request_eligibility
+<span class="k">from</span> tools.employee_info <span class="k">import</span> get_employee_info
+<span class="k">from</span> tools.human_review <span class="k">import</span> clear_reviews, flag_for_human_review
+<span class="k">from</span> tools.policy_limits <span class="k">import</span> get_policy_limits
+
+
+<span class="k">class</span> EmployeeInfoTests(unittest.TestCase):
+    <span class="k">def</span> test_known_employee(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        info = get_employee_info(<span class="s">"E001"</span>)
+        <span class="k">self</span>.assertTrue(info[<span class="s">"found"</span>])
+        <span class="k">self</span>.assertEqual(info[<span class="s">"name"</span>], <span class="s">"Grace Hopper"</span>)
+        <span class="k">self</span>.assertEqual(info[<span class="s">"role"</span>], <span class="s">"employee"</span>)
+        <span class="k">self</span>.assertEqual(info[<span class="s">"tenure_years"</span>], 14)
+        <span class="k">self</span>.assertEqual(info[<span class="s">"equipment"</span>], [<span class="s">"headphones"</span>, <span class="s">"laptop"</span>])
+
+    <span class="k">def</span> test_strips_id_whitespace(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        info = get_employee_info(<span class="s">"  E010 "</span>)
+        <span class="k">self</span>.assertTrue(info[<span class="s">"found"</span>])
+        <span class="k">self</span>.assertEqual(info[<span class="s">"name"</span>], <span class="s">"Linus Torvalds"</span>)
+        <span class="k">self</span>.assertEqual(info[<span class="s">"role"</span>], <span class="s">"employee"</span>)
+
+    <span class="k">def</span> test_unknown_employee(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        info = get_employee_info(<span class="s">"E999"</span>)
+        <span class="k">self</span>.assertEqual(info, {<span class="s">"found"</span>: <span class="k">False</span>, <span class="s">"employee_id"</span>: <span class="s">"E999"</span>})
+
+
+<span class="k">class</span> PolicyLimitTests(unittest.TestCase):
+    <span class="k">def</span> test_each_role(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">for</span> role <span class="k">in</span> (<span class="s">"employee"</span>, <span class="s">"manager"</span>, <span class="s">"director"</span>):
+            limits = get_policy_limits(role)
+            <span class="k">self</span>.assertTrue(limits[<span class="s">"known"</span>])
+            <span class="k">self</span>.assertEqual(limits[<span class="s">"eligible_for"</span>], [<span class="s">"headphones"</span>, <span class="s">"phone"</span>])
+            <span class="k">self</span>.assertFalse(limits[<span class="s">"items"</span>][<span class="s">"laptop"</span>][<span class="s">"eligible"</span>])
+            <span class="k">self</span>.assertIn(<span class="s">"period"</span>, limits[<span class="s">"items"</span>][<span class="s">"headphones"</span>])
+
+    <span class="k">def</span> test_employee_phone_period_is_replacement_only(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        limits = get_policy_limits(<span class="s">" Employee "</span>)
+        <span class="k">self</span>.assertEqual(limits[<span class="s">"role"</span>], <span class="s">"employee"</span>)
+        <span class="k">self</span>.assertIn(<span class="s">"replacement"</span>, limits[<span class="s">"items"</span>][<span class="s">"phone"</span>][<span class="s">"period"</span>].lower())
+        <span class="k">self</span>.assertNotIn(<span class="s">"year"</span>, limits[<span class="s">"items"</span>][<span class="s">"phone"</span>][<span class="s">"period"</span>].lower())
+
+    <span class="k">def</span> test_manager_phone_covers_a_first_phone(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        period = get_policy_limits(<span class="s">"manager"</span>)[<span class="s">"items"</span>][<span class="s">"phone"</span>][<span class="s">"period"</span>].lower()
+        <span class="k">self</span>.assertIn(<span class="s">"first"</span>, period)
+        <span class="k">self</span>.assertIn(<span class="s">"second"</span>, period)
+
+    <span class="k">def</span> test_unknown_role(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        limits = get_policy_limits(<span class="s">"executive"</span>)
+        <span class="k">self</span>.assertEqual(limits, {<span class="s">"role"</span>: <span class="s">"executive"</span>, <span class="s">"known"</span>: <span class="k">False</span>})
+
+
+<span class="k">class</span> EligibilityTests(unittest.TestCase):
+    <span class="k">def</span> test_headphones_are_eligible_for_every_role(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">for</span> employee_id <span class="k">in</span> (<span class="s">"E001"</span>, <span class="s">"E003"</span>, <span class="s">"E004"</span>):
+            result = check_request_eligibility(employee_id, <span class="s">" Headphones "</span>)
+            <span class="k">self</span>.assertTrue(result[<span class="s">"eligible"</span>])
+            <span class="k">self</span>.assertEqual(result[<span class="s">"item"</span>], <span class="s">"headphones"</span>)
+
+    <span class="k">def</span> test_phone_is_eligible_for_every_role(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">for</span> employee_id <span class="k">in</span> (<span class="s">"E005"</span>, <span class="s">"E007"</span>, <span class="s">"E013"</span>):
+            result = check_request_eligibility(employee_id, <span class="s">"phone"</span>)
+            <span class="k">self</span>.assertTrue(result[<span class="s">"eligible"</span>])
+
+    <span class="k">def</span> test_laptop_is_never_eligible(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">for</span> employee_id <span class="k">in</span> (<span class="s">"E010"</span>, <span class="s">"E009"</span>, <span class="s">"E008"</span>):
+            result = check_request_eligibility(employee_id, <span class="s">"laptop"</span>)
+            <span class="k">self</span>.assertFalse(result[<span class="s">"eligible"</span>])
+
+    <span class="k">def</span> test_unknown_item_and_unknown_employee(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertFalse(check_request_eligibility(<span class="s">"E001"</span>, <span class="s">"monitor"</span>)[<span class="s">"eligible"</span>])
+        <span class="k">self</span>.assertFalse(check_request_eligibility(<span class="s">"E999"</span>, <span class="s">"headphones"</span>)[<span class="s">"eligible"</span>])
+
+    <span class="k">def</span> test_does_not_use_equipment_on_file(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        without_headphones = check_request_eligibility(<span class="s">"E011"</span>, <span class="s">"headphones"</span>)
+        with_headphones = check_request_eligibility(<span class="s">"E001"</span>, <span class="s">"headphones"</span>)
+        <span class="k">self</span>.assertTrue(without_headphones[<span class="s">"eligible"</span>])
+        <span class="k">self</span>.assertTrue(with_headphones[<span class="s">"eligible"</span>])
+
+
+<span class="k">class</span> HumanReviewTests(unittest.TestCase):
+    <span class="k">def</span> setUp(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        clear_reviews()
+
+    <span class="k">def</span> test_two_escalations_get_distinct_ids(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        first = flag_for_human_review(<span class="s">"E010"</span>, <span class="s">"laptop"</span>, <span class="s">"I need a laptop for my work."</span>)
+        second = flag_for_human_review(<span class="s">"E004"</span>, <span class="s">"headphones"</span>, <span class="s">"Second pair."</span>)
+        <span class="k">self</span>.assertEqual(first[<span class="s">"status"</span>], <span class="s">"escalated"</span>)
+        <span class="k">self</span>.assertEqual(second[<span class="s">"status"</span>], <span class="s">"escalated"</span>)
+        <span class="k">self</span>.assertNotEqual(first[<span class="s">"review_id"</span>], second[<span class="s">"review_id"</span>])
+        <span class="k">self</span>.assertEqual(first[<span class="s">"employee_id"</span>], <span class="s">"E010"</span>)
+        <span class="k">self</span>.assertEqual(second[<span class="s">"request"</span>], <span class="s">"headphones"</span>)
+
+    <span class="k">def</span> test_blank_fields_are_still_escalated(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        record = flag_for_human_review(<span class="s">"  "</span>, <span class="s">"  "</span>, <span class="s">"  "</span>)
+        <span class="k">self</span>.assertEqual(record[<span class="s">"status"</span>], <span class="s">"escalated"</span>)
+        <span class="k">self</span>.assertEqual(record[<span class="s">"request"</span>], <span class="s">"  "</span>)
+
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    unittest.main()</pre><div class="file">app/tests/test_decision.py</div><pre class="code"><span class="s">""</span><span class="s">"Checks of the 16-rule decision procedure and the reason classifier."</span><span class="s">""</span>
+
+<span class="k">import</span> json
+<span class="k">import</span> sys
+<span class="k">import</span> unittest
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / <span class="s">"src"</span>))
+
+<span class="k">from</span> tools.decision <span class="k">import</span> classify_reason, evaluate_request
+
+FIXTURES = Path(__file__).resolve().parents[2] / <span class="s">"fixtures"</span> / <span class="s">"mock-requests.json"</span>
+
+
+<span class="k">class</span> ClassifyReasonTests(unittest.TestCase):
+    <span class="k">def</span> test_each_signal_class(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(classify_reason(<span class="s">"Second pair, I already have one."</span>), <span class="s">"second"</span>)
+        <span class="k">self</span>.assertEqual(classify_reason(<span class="s">"First pair, I do not have headphones."</span>), <span class="s">"first"</span>)
+        <span class="k">self</span>.assertEqual(classify_reason(<span class="s">"Replacement of my broken headphones."</span>), <span class="s">"replacement"</span>)
+
+    <span class="k">def</span> test_week_overlap_needs_all_three_signals(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(
+            classify_reason(<span class="s">"Keep both for a week, then return the old one."</span>), <span class="s">"week_overlap"</span>
+        )
+        <span class="k">self</span>.assertEqual(classify_reason(<span class="s">"Keep both laptops, they are great."</span>), <span class="s">"unclear"</span>)
+        <span class="k">self</span>.assertEqual(classify_reason(<span class="s">"Return it next week."</span>), <span class="s">"unclear"</span>)
+
+    <span class="k">def</span> test_week_overlap_beats_replacement(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        reason = <span class="s">"Replacing my laptop. I will keep both for a week before I return the old one."</span>
+        <span class="k">self</span>.assertEqual(classify_reason(reason), <span class="s">"week_overlap"</span>)
+
+    <span class="k">def</span> test_second_plus_first_is_unclear(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(classify_reason(<span class="s">"A second pair since I do not have one."</span>), <span class="s">"unclear"</span>)
+
+    <span class="k">def</span> test_unrecognized_reason_is_unclear(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(classify_reason(<span class="s">"Protein goals."</span>), <span class="s">"unclear"</span>)
+
+    <span class="k">def</span> test_matching_ignores_case_and_outer_spaces(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(classify_reason(<span class="s">"  It BROKE. Need a REPLACEMENT.  "</span>), <span class="s">"replacement"</span>)
+
+
+<span class="k">class</span> EvaluateRequestTests(unittest.TestCase):
+    <span class="k">def</span> test_blank_field_escalates(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Grace Hopper"</span>, <span class="s">"employee"</span>, <span class="s">"headphones"</span>, <span class="s">"  "</span>),
+            {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"blank_field"</span>},
+        )
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"  "</span>, <span class="s">"employee"</span>, <span class="s">"headphones"</span>, <span class="s">"broken"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"blank_field"</span>},
+        )
+
+    <span class="k">def</span> test_unknown_role_escalates(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Mani"</span>, <span class="s">"FDE"</span>, <span class="s">"vanilla latte"</span>, <span class="s">"protein goals"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"unknown_role"</span>},
+        )
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Mani"</span>, <span class="s">"executive"</span>, <span class="s">"headphones"</span>, <span class="s">"replacement"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"unknown_role"</span>},
+        )
+
+    <span class="k">def</span> test_unknown_item_escalates(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Grace Hopper"</span>, <span class="s">"employee"</span>, <span class="s">"monitor"</span>, <span class="s">"replacement"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"unknown_item"</span>},
+        )
+
+    <span class="k">def</span> test_employee_laptop_is_denied(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Linus Torvalds"</span>, <span class="s">"employee"</span>, <span class="s">"laptop"</span>, <span class="s">"I need it for work."</span>),
+            {<span class="s">"decision"</span>: <span class="s">"deny"</span>, <span class="s">"rule"</span>: <span class="s">"employee_laptop"</span>},
+        )
+
+    <span class="k">def</span> test_manager_laptop_week_overlap_escalates(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        reason = <span class="s">"Replacing my laptop. I will keep both for a week before returning the old one."</span>
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Ada Lovelace"</span>, <span class="s">"manager"</span>, <span class="s">"laptop"</span>, reason),
+            {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"laptop_week_overlap"</span>},
+        )
+
+    <span class="k">def</span> test_other_manager_laptops_are_denied(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Ada Lovelace"</span>, <span class="s">"director"</span>, <span class="s">"laptop"</span>, <span class="s">"broken screen"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"deny"</span>, <span class="s">"rule"</span>: <span class="s">"laptop_not_covered"</span>},
+        )
+
+    <span class="k">def</span> test_headphones_replacement_and_first_are_approved(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Grace Hopper"</span>, <span class="s">"employee"</span>, <span class="s">"headphones"</span>, <span class="s">"broken"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"approve"</span>, <span class="s">"rule"</span>: <span class="s">"headphones_replacement"</span>},
+        )
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Alan Turing"</span>, <span class="s">"manager"</span>, <span class="s">"headphones"</span>, <span class="s">"first pair"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"approve"</span>, <span class="s">"rule"</span>: <span class="s">"headphones_first"</span>},
+        )
+
+    <span class="k">def</span> test_headphones_second_is_denied(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Margaret Hamilton"</span>, <span class="s">"director"</span>, <span class="s">"headphones"</span>, <span class="s">"spare pair"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"deny"</span>, <span class="s">"rule"</span>: <span class="s">"headphones_second"</span>},
+        )
+
+    <span class="k">def</span> test_employee_phone_rules(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Radia Perlman"</span>, <span class="s">"employee"</span>, <span class="s">"phone"</span>, <span class="s">"my phone broke"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"approve"</span>, <span class="s">"rule"</span>: <span class="s">"employee_phone_replacement"</span>},
+        )
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Radia Perlman"</span>, <span class="s">"employee"</span>, <span class="s">"phone"</span>, <span class="s">"first company phone"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"employee_phone_first"</span>},
+        )
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Tim Berners-Lee"</span>, <span class="s">"employee"</span>, <span class="s">"phone"</span>, <span class="s">"additional phone"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"deny"</span>, <span class="s">"rule"</span>: <span class="s">"employee_phone_second"</span>},
+        )
+
+    <span class="k">def</span> test_manager_and_director_phone_rules(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Barbara Liskov"</span>, <span class="s">"manager"</span>, <span class="s">"phone"</span>, <span class="s">"replacement, it stopped working"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"approve"</span>, <span class="s">"rule"</span>: <span class="s">"manager_phone_replacement"</span>},
+        )
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Barbara Liskov"</span>, <span class="s">"manager"</span>, <span class="s">"phone"</span>, <span class="s">"I do not have one yet"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"approve"</span>, <span class="s">"rule"</span>: <span class="s">"manager_phone_first"</span>},
+        )
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Donald Knuth"</span>, <span class="s">"director"</span>, <span class="s">"phone"</span>, <span class="s">"another phone"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"deny"</span>, <span class="s">"rule"</span>: <span class="s">"manager_phone_second"</span>},
+        )
+
+    <span class="k">def</span> test_unclear_and_week_overlap_reasons_escalate(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Grace Hopper"</span>, <span class="s">"employee"</span>, <span class="s">"headphones"</span>, <span class="s">"not sure what I need"</span>),
+            {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"unclear_reason"</span>},
+        )
+        reason = <span class="s">"Replacing my phone. I will keep both for a week and return the old one."</span>
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">"Ada Lovelace"</span>, <span class="s">"manager"</span>, <span class="s">"phone"</span>, reason),
+            {<span class="s">"decision"</span>: <span class="s">"escalate"</span>, <span class="s">"rule"</span>: <span class="s">"unclear_reason"</span>},
+        )
+
+    <span class="k">def</span> test_normalizes_role_item_and_reason(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.assertEqual(
+            evaluate_request(<span class="s">" Grace Hopper "</span>, <span class="s">" Employee "</span>, <span class="s">" Headphones "</span>, <span class="s">" It BROKE. "</span>),
+            {<span class="s">"decision"</span>: <span class="s">"approve"</span>, <span class="s">"rule"</span>: <span class="s">"headphones_replacement"</span>},
+        )
+
+
+<span class="k">class</span> FixtureTests(unittest.TestCase):
+    <span class="k">def</span> test_all_fixture_cases_match_expected_decision(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="k">with</span> FIXTURES.open(encoding=<span class="s">"utf-8"</span>) <span class="k">as</span> handle:
+            cases = json.load(handle)[<span class="s">"cases"</span>]
+        <span class="k">self</span>.assertEqual(len(cases), 10)
+        <span class="k">for</span> case <span class="k">in</span> cases:
+            <span class="k">with</span> <span class="k">self</span>.subTest(case_id=case[<span class="s">"id"</span>]):
+                request = case[<span class="s">"request"</span>]
+                result = evaluate_request(
+                    request[<span class="s">"employee"</span>],
+                    request[<span class="s">"role"</span>],
+                    request[<span class="s">"item_requested"</span>],
+                    request[<span class="s">"reason"</span>],
+                )
+                <span class="k">self</span>.assertEqual(result[<span class="s">"decision"</span>], case[<span class="s">"expected"</span>], case[<span class="s">"id"</span>])
+
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    unittest.main()</pre><div class="file">app/tests/test_react.py</div><pre class="code"><span class="s">""</span>"End-to-end ReAct loop checks <span class="k">with</span> a scripted LLM <span class="k">and</span> scripted tools.
+
+No Ollama <span class="k">and</span> no live server: the loop <span class="k">is</span> exercised through the same seams
+production uses, which <span class="k">is</span> what CI runs.
+<span class="s">""</span>"
+
+<span class="k">import</span> sys
+<span class="k">import</span> unittest
+<span class="k">from</span> itertools <span class="k">import</span> repeat
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / <span class="s">"src"</span>))
+
+<span class="k">from</span> agent.llm_client <span class="k">import</span> LLMResponse, ToolCall
+<span class="k">from</span> agent.react <span class="k">import</span> FALLBACK_RESPONSE, run_agent
+<span class="k">from</span> agent.trace <span class="k">import</span> Trace
+
+
+<span class="k">class</span> FakeLLM:
+    <span class="s">""</span><span class="s">"Scripted chat(): returns prepared LLMResponse objects in order."</span><span class="s">""</span>
+
+    <span class="k">def</span> __init__(<span class="k">self</span>, script) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.script = iter(script)
+        <span class="k">self</span>.messages: list[list[dict]] = []
+
+    <span class="k">def</span> chat(<span class="k">self</span>, messages, tools=<span class="k">None</span>) -&gt; LLMResponse:
+        <span class="k">self</span>.messages.append(messages)
+        <span class="k">return</span> next(<span class="k">self</span>.script)
+
+
+<span class="k">class</span> FakeMCP:
+    <span class="s">""</span><span class="s">"Scripted tools: returns one prepared result per tool name, records calls."</span><span class="s">""</span>
+
+    <span class="k">def</span> __init__(<span class="k">self</span>, responses: dict) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.responses = responses
+        <span class="k">self</span>.calls: list[tuple[str, dict]] = []
+
+    <span class="k">async</span> <span class="k">def</span> list_tool_schemas(<span class="k">self</span>) -&gt; list[dict]:
+        <span class="k">return</span> [{<span class="s">"type"</span>: <span class="s">"function"</span>, <span class="s">"function"</span>: {<span class="s">"name"</span>: name, <span class="s">"parameters"</span>: {}}} <span class="k">for</span> name <span class="k">in</span> <span class="k">self</span>.responses]
+
+    <span class="k">async</span> <span class="k">def</span> call_tool(<span class="k">self</span>, name: str, arguments: dict):
+        <span class="k">self</span>.calls.append((name, arguments))
+        <span class="k">return</span> <span class="k">self</span>.responses[name]
+
+
+<span class="k">def</span> _responses(decision: str, rule: str) -&gt; dict:
+    <span class="k">return</span> {
+        <span class="s">"get_employee_info"</span>: {
+            <span class="s">"found"</span>: <span class="k">True</span>,
+            <span class="s">"employee_id"</span>: <span class="s">"E001"</span>,
+            <span class="s">"name"</span>: <span class="s">"Grace Hopper"</span>,
+            <span class="s">"role"</span>: <span class="s">"employee"</span>,
+            <span class="s">"tenure_years"</span>: 14,
+            <span class="s">"equipment"</span>: [<span class="s">"headphones"</span>, <span class="s">"laptop"</span>],
+        },
+        <span class="s">"evaluate_request"</span>: {<span class="s">"decision"</span>: decision, <span class="s">"rule"</span>: rule},
+        <span class="s">"flag_for_human_review"</span>: {<span class="s">"review_id"</span>: <span class="s">"R001"</span>, <span class="s">"status"</span>: <span class="s">"escalated"</span>},
+    }
+
+
+<span class="k">def</span> _call(name: str, content: str, arguments: dict) -&gt; LLMResponse:
+    <span class="k">return</span> LLMResponse(content=content, tool_call=ToolCall(id=<span class="s">"call_1"</span>, name=name, arguments=arguments))
+
+
+APPROVE_REQUEST = <span class="s">"Hi, I am E001 Grace Hopper. My headphones broke; I need a replacement."</span>
+
+
+<span class="k">class</span> ApprovePathTests(unittest.TestCase):
+    <span class="k">def</span> test_approve_routes_to_a_draft_without_escalation(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        mcp = FakeMCP(_responses(<span class="s">"approve"</span>, <span class="s">"headphones_replacement"</span>))
+        llm = FakeLLM(
+            [
+                _call(<span class="s">"get_employee_info"</span>, <span class="s">"Finding the requester."</span>, {<span class="s">"employee_id"</span>: <span class="s">"E001"</span>}),
+                _call(
+                    <span class="s">"evaluate_request"</span>,
+                    <span class="s">"Applying the policy."</span>,
+                    {
+                        <span class="s">"employee"</span>: <span class="s">"Grace Hopper"</span>,
+                        <span class="s">"role"</span>: <span class="s">"employee"</span>,
+                        <span class="s">"item_requested"</span>: <span class="s">"headphones"</span>,
+                        <span class="s">"reason"</span>: <span class="s">"broken"</span>,
+                    },
+                ),
+                LLMResponse(content=<span class="s">"Grace, your replacement headphones are approved."</span>),
+                LLMResponse(content=<span class="s">"CONFIRMED"</span>),
+            ]
+        )
+
+        result = run_agent(APPROVE_REQUEST, llm=llm, mcp=mcp)
+
+        <span class="k">self</span>.assertEqual(result.final_response, <span class="s">"Grace, your replacement headphones are approved."</span>)
+        <span class="k">self</span>.assertEqual(result.decision, <span class="s">"approve"</span>)
+        <span class="k">self</span>.assertEqual(result.rule, <span class="s">"headphones_replacement"</span>)
+        <span class="k">self</span>.assertIsNone(result.review_id)
+        <span class="k">self</span>.assertEqual(
+            [name <span class="k">for</span> name, _ <span class="k">in</span> mcp.calls], [<span class="s">"get_employee_info"</span>, <span class="s">"evaluate_request"</span>]
+        )
+
+    <span class="k">def</span> test_trace_records_tao_and_route_steps(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        mcp = FakeMCP(_responses(<span class="s">"approve"</span>, <span class="s">"headphones_replacement"</span>))
+        llm = FakeLLM(
+            [
+                _call(<span class="s">"get_employee_info"</span>, <span class="s">"Finding the requester."</span>, {<span class="s">"employee_id"</span>: <span class="s">"E001"</span>}),
+                _call(<span class="s">"evaluate_request"</span>, <span class="s">"Applying the policy."</span>, {}),
+                LLMResponse(content=<span class="s">"Approved."</span>),
+                LLMResponse(content=<span class="s">"CONFIRMED"</span>),
+            ]
+        )
+
+        result = run_agent(APPROVE_REQUEST, llm=llm, mcp=mcp)
+
+        types = [step.type <span class="k">for</span> step <span class="k">in</span> result.trace.steps]
+        <span class="k">for</span> expected <span class="k">in</span> (<span class="s">"thought"</span>, <span class="s">"action"</span>, <span class="s">"observation"</span>, <span class="s">"route"</span>, <span class="s">"draft"</span>, <span class="s">"reflection"</span>):
+            <span class="k">self</span>.assertIn(expected, types)
+        route = next(step <span class="k">for</span> step <span class="k">in</span> result.trace.steps <span class="k">if</span> step.type == <span class="s">"route"</span>)
+        <span class="k">self</span>.assertIn(<span class="s">"approve"</span>, route.content)
+
+
+<span class="k">class</span> EscalatePathTests(unittest.TestCase):
+    <span class="k">def</span> test_escalation_flags_for_human_review(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        mcp = FakeMCP(_responses(<span class="s">"escalate"</span>, <span class="s">"laptop_week_overlap"</span>))
+        llm = FakeLLM(
+            [
+                _call(<span class="s">"get_employee_info"</span>, <span class="s">"Finding the requester."</span>, {<span class="s">"employee_id"</span>: <span class="s">"E005"</span>}),
+                _call(<span class="s">"evaluate_request"</span>, <span class="s">"Applying the policy."</span>, {}),
+                _call(
+                    <span class="s">"flag_for_human_review"</span>,
+                    <span class="s">"This needs a human."</span>,
+                    {<span class="s">"employee_id"</span>: <span class="s">"E005"</span>, <span class="s">"request"</span>: <span class="s">"laptop"</span>, <span class="s">"reason"</span>: <span class="s">"week overlap"</span>},
+                ),
+                LLMResponse(content=<span class="s">"Escalated to human review as R001."</span>),
+                LLMResponse(content=<span class="s">"CONFIRMED"</span>),
+            ]
+        )
+
+        result = run_agent(<span class="s">"Manager laptop request."</span>, llm=llm, mcp=mcp)
+
+        <span class="k">self</span>.assertEqual(result.decision, <span class="s">"escalate"</span>)
+        <span class="k">self</span>.assertEqual(result.rule, <span class="s">"laptop_week_overlap"</span>)
+        <span class="k">self</span>.assertEqual(result.review_id, <span class="s">"R001"</span>)
+        <span class="k">self</span>.assertEqual(
+            [name <span class="k">for</span> name, _ <span class="k">in</span> mcp.calls][-1], <span class="s">"flag_for_human_review"</span>
+        )
+
+    <span class="k">def</span> test_deny_never_calls_the_escalation_tool(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        mcp = FakeMCP(_responses(<span class="s">"deny"</span>, <span class="s">"employee_laptop"</span>))
+        llm = FakeLLM(
+            [
+                _call(<span class="s">"get_employee_info"</span>, <span class="s">"Finding the requester."</span>, {<span class="s">"employee_id"</span>: <span class="s">"E010"</span>}),
+                _call(<span class="s">"evaluate_request"</span>, <span class="s">"Applying the policy."</span>, {}),
+                LLMResponse(content=<span class="s">"Laptops are not covered for employees."</span>),
+                LLMResponse(content=<span class="s">"CONFIRMED"</span>),
+            ]
+        )
+
+        result = run_agent(<span class="s">"Employee laptop request."</span>, llm=llm, mcp=mcp)
+
+        <span class="k">self</span>.assertEqual(result.decision, <span class="s">"deny"</span>)
+        <span class="k">self</span>.assertEqual(result.rule, <span class="s">"employee_laptop"</span>)
+        <span class="k">self</span>.assertNotIn(<span class="s">"flag_for_human_review"</span>, [name <span class="k">for</span> name, _ <span class="k">in</span> mcp.calls])
+
+
+<span class="k">class</span> LoopGuardTests(unittest.TestCase):
+    <span class="k">def</span> test_max_iterations_returns_the_fallback(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        mcp = FakeMCP(_responses(<span class="s">"approve"</span>, <span class="s">"headphones_replacement"</span>))
+        llm = FakeLLM(
+            repeat(
+                _call(<span class="s">"evaluate_request"</span>, <span class="s">"Applying the policy."</span>, {}),
+            )
+        )
+
+        result = run_agent(APPROVE_REQUEST, llm=llm, mcp=mcp, max_iterations=3)
+
+        <span class="k">self</span>.assertEqual(result.final_response, FALLBACK_RESPONSE)
+        <span class="k">self</span>.assertEqual(result.decision, <span class="s">"approve"</span>)
+        <span class="k">self</span>.assertTrue(any(step.type == <span class="s">"error"</span> <span class="k">for</span> step <span class="k">in</span> result.trace.steps))
+
+    <span class="k">def</span> test_draft_without_policy_check_is_bounced(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        mcp = FakeMCP(_responses(<span class="s">"approve"</span>, <span class="s">"headphones_replacement"</span>))
+        llm = FakeLLM(
+            [
+                LLMResponse(content=<span class="s">"I would approve this."</span>),
+                _call(<span class="s">"evaluate_request"</span>, <span class="s">"Checking the policy first."</span>, {}),
+                LLMResponse(content=<span class="s">"Grace, your replacement headphones are approved."</span>),
+                LLMResponse(content=<span class="s">"CONFIRMED"</span>),
+            ]
+        )
+
+        result = run_agent(APPROVE_REQUEST, llm=llm, mcp=mcp)
+
+        <span class="k">self</span>.assertEqual(result.decision, <span class="s">"approve"</span>)
+        <span class="k">self</span>.assertTrue(
+            any(<span class="s">"bouncing"</span> <span class="k">in</span> step.content <span class="k">for</span> step <span class="k">in</span> result.trace.steps)
+        )
+        <span class="k">self</span>.assertEqual(
+            [name <span class="k">for</span> name, _ <span class="k">in</span> mcp.calls][0], <span class="s">"evaluate_request"</span>
+        )
+
+
+<span class="k">class</span> ReflectionSeamTests(unittest.TestCase):
+    <span class="k">def</span> test_reflector_can_correct_the_draft(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        mcp = FakeMCP(_responses(<span class="s">"approve"</span>, <span class="s">"headphones_replacement"</span>))
+        llm = FakeLLM(
+            [
+                _call(<span class="s">"get_employee_info"</span>, <span class="s">"Finding the requester."</span>, {<span class="s">"employee_id"</span>: <span class="s">"E001"</span>}),
+                _call(<span class="s">"evaluate_request"</span>, <span class="s">"Applying the policy."</span>, {}),
+                LLMResponse(content=<span class="s">"Draft v1."</span>),
+                LLMResponse(content=<span class="s">"CORRECTED: Grace, your replacement headphones are approved under rule headphones_replacement."</span>),
+            ]
+        )
+
+        result = run_agent(APPROVE_REQUEST, llm=llm, mcp=mcp)
+
+        <span class="k">self</span>.assertTrue(
+            result.final_response.startswith(<span class="s">"Grace, your replacement headphones"</span>)
+        )
+        <span class="k">self</span>.assertTrue(
+            any(<span class="s">"corrected"</span> <span class="k">in</span> step.content.lower() <span class="k">for</span> step <span class="k">in</span> result.trace.steps)
+        )
+
+    <span class="k">def</span> test_trace_can_run_silently(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        trace = Trace(echo=<span class="k">False</span>)
+        trace.add(<span class="s">"thought"</span>, <span class="s">"hidden"</span>)
+        <span class="k">self</span>.assertEqual(trace.to_text(), <span class="s">"[THOUGHT] hidden"</span>)
+
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    unittest.main()</pre><div class="file">app/tests/test_reflection.py</div><pre class="code"><span class="s">""</span><span class="s">"Checks of the Reflector's CONFIRMED / CORRECTED handling, with a fake LLM."</span><span class="s">""</span>
+
+<span class="k">import</span> sys
+<span class="k">import</span> unittest
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / <span class="s">"src"</span>))
+
+<span class="k">from</span> agent.llm_client <span class="k">import</span> LLMResponse
+<span class="k">from</span> agent.reflection <span class="k">import</span> reflect
+<span class="k">from</span> agent.trace <span class="k">import</span> Trace
+
+
+<span class="k">class</span> FakeLLM:
+    <span class="s">""</span><span class="s">"Scripted chat(): returns prepared LLMResponse objects in order."</span><span class="s">""</span>
+
+    <span class="k">def</span> __init__(<span class="k">self</span>, script: list[LLMResponse]) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.script = iter(script)
+        <span class="k">self</span>.messages: list[list[dict]] = []
+
+    <span class="k">def</span> chat(<span class="k">self</span>, messages, tools=<span class="k">None</span>) -&gt; LLMResponse:
+        <span class="k">self</span>.messages.append(messages)
+        <span class="k">return</span> next(<span class="k">self</span>.script)
+
+
+<span class="k">def</span> _trace_with_observation() -&gt; Trace:
+    trace = Trace(echo=<span class="k">False</span>)
+    trace.add(<span class="s">"observation"</span>, <span class="s">'{"decision": "approve", "rule": "headphones_replacement"}'</span>)
+    <span class="k">return</span> trace
+
+
+<span class="k">class</span> ReflectTests(unittest.TestCase):
+    <span class="k">def</span> test_confirmed_keeps_the_draft(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        llm = FakeLLM([LLMResponse(content=<span class="s">"CONFIRMED"</span>)])
+        trace = _trace_with_observation()
+        result = reflect(<span class="s">"Your replacement headphones are approved."</span>, trace, llm)
+        <span class="k">self</span>.assertTrue(result.confirmed)
+        <span class="k">self</span>.assertEqual(result.final_draft, <span class="s">"Your replacement headphones are approved."</span>)
+
+    <span class="k">def</span> test_prompt_includes_draft_and_observations(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        llm = FakeLLM([LLMResponse(content=<span class="s">"CONFIRMED"</span>)])
+        trace = _trace_with_observation()
+        reflect(<span class="s">"Draft text."</span>, trace, llm)
+        prompt = llm.messages[0][-1][<span class="s">"content"</span>]
+        <span class="k">self</span>.assertIn(<span class="s">"Draft text."</span>, prompt)
+        <span class="k">self</span>.assertIn(<span class="s">"headphones_replacement"</span>, prompt)
+
+    <span class="k">def</span> test_corrected_replaces_the_draft(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        llm = FakeLLM([LLMResponse(content=<span class="s">"CORRECTED: The corrected draft."</span>)])
+        result = reflect(<span class="s">"The draft."</span>, _trace_with_observation(), llm)
+        <span class="k">self</span>.assertFalse(result.confirmed)
+        <span class="k">self</span>.assertEqual(result.final_draft, <span class="s">"The corrected draft."</span>)
+        <span class="k">self</span>.assertEqual(result.original, <span class="s">"The draft."</span>)
+
+    <span class="k">def</span> test_empty_correction_keeps_the_original(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        llm = FakeLLM([LLMResponse(content=<span class="s">"CORRECTED:"</span>)])
+        result = reflect(<span class="s">"The draft."</span>, _trace_with_observation(), llm)
+        <span class="k">self</span>.assertEqual(result.final_draft, <span class="s">"The draft."</span>)
+
+    <span class="k">def</span> test_unparseable_reply_fails_open(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        llm = FakeLLM([LLMResponse(content=<span class="s">"The draft looks fine to me."</span>)])
+        result = reflect(<span class="s">"The draft."</span>, _trace_with_observation(), llm)
+        <span class="k">self</span>.assertTrue(result.confirmed)
+        <span class="k">self</span>.assertEqual(result.final_draft, <span class="s">"The draft."</span>)
+
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    unittest.main()</pre><div class="file">demo/outputs/pytest.txt</div><pre class="term">============================= test session starts =============================
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- D:\Genspark\it-service-mcp\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Genspark\it-service-mcp
+configfile: pyproject.toml
+testpaths: app/tests
+plugins: anyio-4.15.1
+collecting ... collected 45 items
+
+app/tests/test_decision.py::ClassifyReasonTests::test_each_signal_class PASSED [  2%]
+app/tests/test_decision.py::ClassifyReasonTests::test_matching_ignores_case_and_outer_spaces PASSED [  4%]
+app/tests/test_decision.py::ClassifyReasonTests::test_second_plus_first_is_unclear PASSED [  6%]
+app/tests/test_decision.py::ClassifyReasonTests::test_unrecognized_reason_is_unclear PASSED [  8%]
+app/tests/test_decision.py::ClassifyReasonTests::test_week_overlap_beats_replacement PASSED [ 11%]
+app/tests/test_decision.py::ClassifyReasonTests::test_week_overlap_needs_all_three_signals PASSED [ 13%]
+app/tests/test_decision.py::EvaluateRequestTests::test_blank_field_escalates PASSED [ 15%]
+app/tests/test_decision.py::EvaluateRequestTests::test_employee_laptop_is_denied PASSED [ 17%]
+app/tests/test_decision.py::EvaluateRequestTests::test_employee_phone_rules PASSED [ 20%]
+app/tests/test_decision.py::EvaluateRequestTests::test_headphones_replacement_and_first_are_approved PASSED [ 22%]
+app/tests/test_decision.py::EvaluateRequestTests::test_headphones_second_is_denied PASSED [ 24%]
+app/tests/test_decision.py::EvaluateRequestTests::test_manager_and_director_phone_rules PASSED [ 26%]
+app/tests/test_decision.py::EvaluateRequestTests::test_manager_laptop_week_overlap_escalates PASSED [ 28%]
+app/tests/test_decision.py::EvaluateRequestTests::test_normalizes_role_item_and_reason PASSED [ 31%]
+app/tests/test_decision.py::EvaluateRequestTests::test_other_manager_laptops_are_denied PASSED [ 33%]
+app/tests/test_decision.py::EvaluateRequestTests::test_unclear_and_week_overlap_reasons_escalate PASSED [ 35%]
+app/tests/test_decision.py::EvaluateRequestTests::test_unknown_item_escalates PASSED [ 37%]
+app/tests/test_decision.py::EvaluateRequestTests::test_unknown_role_escalates PASSED [ 40%]
+app/tests/test_decision.py::FixtureTests::test_all_fixture_cases_match_expected_decision 
+app/tests/test_decision.py::FixtureTests::test_all_fixture_cases_match_expected_decision PASSED [ 42%]
+app/tests/test_react.py::ApprovePathTests::test_approve_routes_to_a_draft_without_escalation PASSED [ 44%]
+app/tests/test_react.py::ApprovePathTests::test_trace_records_tao_and_route_steps PASSED [ 46%]
+app/tests/test_react.py::EscalatePathTests::test_deny_never_calls_the_escalation_tool PASSED [ 48%]
+app/tests/test_react.py::EscalatePathTests::test_escalation_flags_for_human_review PASSED [ 51%]
+app/tests/test_react.py::LoopGuardTests::test_max_iterations_returns_the_fallback PASSED [ 53%]
+app/tests/test_react.py::ReflectionSeamTests::test_reflector_can_correct_the_draft PASSED [ 55%]
+app/tests/test_react.py::ReflectionSeamTests::test_trace_can_run_silently PASSED [ 57%]
+app/tests/test_reflection.py::ReflectTests::test_confirmed_keeps_the_draft PASSED [ 60%]
+app/tests/test_reflection.py::ReflectTests::test_corrected_replaces_the_draft PASSED [ 62%]
+app/tests/test_reflection.py::ReflectTests::test_empty_correction_keeps_the_original PASSED [ 64%]
+app/tests/test_reflection.py::ReflectTests::test_prompt_includes_draft_and_observations PASSED [ 66%]
+app/tests/test_reflection.py::ReflectTests::test_unparseable_reply_fails_open PASSED [ 68%]
+app/tests/test_tools.py::EmployeeInfoTests::test_known_employee PASSED   [ 71%]
+app/tests/test_tools.py::EmployeeInfoTests::test_strips_id_whitespace PASSED [ 73%]
+app/tests/test_tools.py::EmployeeInfoTests::test_unknown_employee PASSED [ 75%]
+app/tests/test_tools.py::PolicyLimitTests::test_each_role PASSED         [ 77%]
+app/tests/test_tools.py::PolicyLimitTests::test_employee_phone_period_is_replacement_only PASSED [ 80%]
+app/tests/test_tools.py::PolicyLimitTests::test_manager_phone_covers_a_first_phone PASSED [ 82%]
+app/tests/test_tools.py::PolicyLimitTests::test_unknown_role PASSED      [ 84%]
+app/tests/test_tools.py::EligibilityTests::test_does_not_use_equipment_on_file PASSED [ 86%]
+app/tests/test_tools.py::EligibilityTests::test_headphones_are_eligible_for_every_role PASSED [ 88%]
+app/tests/test_tools.py::EligibilityTests::test_laptop_is_never_eligible PASSED [ 91%]
+app/tests/test_tools.py::EligibilityTests::test_phone_is_eligible_for_every_role PASSED [ 93%]
+app/tests/test_tools.py::EligibilityTests::test_unknown_item_and_unknown_employee PASSED [ 95%]
+app/tests/test_tools.py::HumanReviewTests::test_blank_fields_are_still_escalated PASSED [ 97%]
+app/tests/test_tools.py::HumanReviewTests::test_two_escalations_get_distinct_ids PASSED [100%]
+
+=================== 45 passed, 10 subtests passed in 0.71s ====================</pre></section><section><h2>5. Agent code, including the MCP client connection</h2><div class="file">app/src/agent/react.py</div><pre class="code"><span class="s">""</span>"Planner -&gt; TAO -&gt; Reflector, the whiteboard pipeline.
+
+Planner: the system prompt below; the model states its plan before acting.
+TAO: the Thought/Action/Observation loop over the MCP server's tools.
+Routing: an explicit [ROUTE] step after evaluate_request returns a decision.
+Reflector: agent.reflection.reflect confirms <span class="k">or</span> corrects the final draft.
+<span class="s">""</span>"
+
+<span class="k">from</span> __future__ <span class="k">import</span> annotations
+
+<span class="k">import</span> json
+<span class="k">from</span> dataclasses <span class="k">import</span> dataclass
+<span class="k">from</span> typing <span class="k">import</span> Any
+
+<span class="k">import</span> anyio
+
+<span class="k">from</span> agent.llm_client <span class="k">import</span> OllamaClient
+<span class="k">from</span> agent.reflection <span class="k">import</span> reflect
+<span class="k">from</span> agent.trace <span class="k">import</span> Trace
+<span class="k">from</span> mcp_client <span class="k">import</span> MCPClient
+<span class="k">from</span> tools.data_store <span class="k">import</span> load_employees
+
+MAX_ITERATIONS = 8
+
+_ROUTES = {
+    <span class="s">"approve"</span>: <span class="s">"draft the approval, naming the rule"</span>,
+    <span class="s">"deny"</span>: <span class="s">"draft the refusal, naming the rule; do not call flag_for_human_review"</span>,
+    <span class="s">"escalate"</span>: <span class="s">"call flag_for_human_review, then draft the handoff with the review id"</span>,
+}
+
+
+<span class="k">def</span> _roster() -&gt; str:
+    lines = []
+    <span class="k">for</span> info <span class="k">in</span> load_employees():
+        lines.append(f<span class="s">"- {info['employee_id']}: {info['name']} ({info['role']})"</span>)
+    <span class="k">return</span> <span class="s">"\n"</span>.join(lines)
+
+
+<span class="k">def</span> _build_system_prompt() -&gt; str:
+    <span class="k">return</span> f<span class="s">""</span>"You are the IT equipment request agent <span class="k">for</span> the Internal IT Service MCP server.
+
+REQUEST
+The user submits an equipment request <span class="k">in</span> natural language. Extract four fields:
+employee (the person's name), role, item_requested (headphones, phone, <span class="k">or</span> laptop),
+<span class="k">and</span> reason.
+
+ROSTER
+{_roster()}
+When the request names a person without an id, find their id above. When it gives
+an id, use it <span class="k">as</span> given.
+
+TOOLS
+- get_employee_info(employee_id): the employee's role, tenure, <span class="k">and</span> equipment on file. Call this first to establish who <span class="k">is</span> asking <span class="k">and</span> what their role <span class="k">is</span>.
+- get_policy_limits(role): what a role <span class="k">is</span> eligible <span class="k">for</span> <span class="k">and</span> how often.
+- check_request_eligibility(employee_id, item): static coverage check <span class="k">for</span> a role <span class="k">and</span> item.
+- evaluate_request(employee, role, item_requested, reason): applies the full written policy <span class="k">and</span> returns two fields, decision (approve, deny, <span class="k">or</span> escalate) <span class="k">and</span> rule (the rule id). This tool decides the request; never decide policy yourself.
+- flag_for_human_review(employee_id, request, reason): side-effecting escalation to the human review queue.
+
+PLAN
+1. Call get_employee_info to identify the requester <span class="k">and</span> their role.
+2. Call evaluate_request <span class="k">with</span> the four extracted fields. Use the role returned by get_employee_info, <span class="k">not</span> one you infer, unless get_employee_info does <span class="k">not</span> find the requester: then use the role exactly <span class="k">as</span> the user stated it, unusual <span class="k">as</span> it may be. If a field <span class="k">is</span> missing <span class="k">from</span> the request, <span class="k">pass</span> an empty string <span class="k">for</span> it. Pass the reason text <span class="k">as</span> the user wrote it.
+3. Route by the decision evaluate_request returned: {json.dumps(_ROUTES)}
+4. Write the final draft <span class="k">and</span> nothing <span class="k">else</span>. The draft <span class="k">is</span> the message that goes to the requester: an approval says what <span class="k">is</span> granted <span class="k">and</span> cites the rule; a denial says it <span class="k">is</span> refused <span class="k">and</span> cites the rule <span class="k">and</span> the policy reason; a handoff names the review id <span class="k">and</span> why. Keep it under six sentences <span class="k">and</span> address the requester by name. Never mention tools, iterations, routing, <span class="k">or</span> drafting inside the draft.
+
+Before every tool call, write one short sentence explaining why. EVERY request <span class="k">is</span>
+decided by evaluate_request: even when the item <span class="k">or</span> role looks unrelated to IT
+equipment, extract the four fields, call evaluate_request, <span class="k">and</span> route by its
+decision. Only an escalate decision goes to flag_for_human_review. Never decide
+policy yourself, never invent policy rules, <span class="k">and</span> never answer a request without
+calling evaluate_request first.<span class="s">""</span>"
+
+
+SYSTEM_PROMPT = _build_system_prompt()
+
+FALLBACK_RESPONSE = (
+    <span class="s">"Unable to reach a decision after multiple attempts. "</span>
+    <span class="s">"Please try again or contact IT support."</span>
+)
+
+
+@dataclass
+<span class="k">class</span> AgentResult:
+    request: str
+    final_response: str
+    trace: Trace
+    decision: str | <span class="k">None</span> = <span class="k">None</span>
+    rule: str | <span class="k">None</span> = <span class="k">None</span>
+    review_id: str | <span class="k">None</span> = <span class="k">None</span>
+
+
+<span class="k">def</span> run_agent(
+    request: str,
+    llm: Any = <span class="k">None</span>,
+    mcp: Any = <span class="k">None</span>,
+    max_iterations: int = MAX_ITERATIONS,
+) -&gt; AgentResult:
+    <span class="s">""</span>"Run one request through the pipeline.
+
+    llm <span class="k">and</span> mcp are seams <span class="k">for</span> tests: <span class="k">pass</span> a FakeLLM <span class="k">and</span> a FakeMCP to run the
+    loop without Ollama <span class="k">or</span> a live server. Production callers <span class="k">pass</span> neither.
+    <span class="s">""</span>"
+    llm = llm <span class="k">or</span> OllamaClient.from_env()
+    <span class="k">if</span> mcp <span class="k">is</span> <span class="k">not</span> <span class="k">None</span>:
+        <span class="k">return</span> anyio.run(_react_loop, request, llm, mcp, max_iterations)
+    <span class="k">return</span> anyio.run(_react_loop_live, request, llm, max_iterations)
+
+
+<span class="k">async</span> <span class="k">def</span> _react_loop_live(request: str, llm: Any, max_iterations: int) -&gt; AgentResult:
+    <span class="k">async</span> <span class="k">with</span> MCPClient() <span class="k">as</span> server:
+        <span class="k">return</span> <span class="k">await</span> _react_loop(request, llm, server, max_iterations)
+
+
+<span class="k">async</span> <span class="k">def</span> _react_loop(
+    request: str, llm: Any, mcp: Any, max_iterations: int
+) -&gt; AgentResult:
+    trace = Trace()
+    tools = <span class="k">await</span> mcp.list_tool_schemas()
+    messages: list[dict[str, Any]] = [
+        {<span class="s">"role"</span>: <span class="s">"system"</span>, <span class="s">"content"</span>: SYSTEM_PROMPT},
+        {<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: request},
+    ]
+    decision: str | <span class="k">None</span> = <span class="k">None</span>
+    rule: str | <span class="k">None</span> = <span class="k">None</span>
+    review_id: str | <span class="k">None</span> = <span class="k">None</span>
+    policy_checked = <span class="k">False</span>
+
+    <span class="k">for</span> iteration <span class="k">in</span> range(1, max_iterations + 1):
+        response = llm.chat(messages, tools=tools)
+
+        <span class="k">if</span> response.has_tool_call <span class="k">and</span> response.tool_call:
+            action = response.tool_call
+            thought = response.content <span class="k">or</span> f<span class="s">"I need to call {action.name}."</span>
+            trace.add(<span class="s">"thought"</span>, f<span class="s">"(iteration {iteration}) {thought}"</span>)
+            trace.add(
+                <span class="s">"action"</span>, f<span class="s">"{action.name}({json.dumps(action.arguments, sort_keys=True)})"</span>
+            )
+            <span class="k">try</span>:
+                observation = <span class="k">await</span> mcp.call_tool(action.name, action.arguments)
+            <span class="k">except</span> (RuntimeError, json.JSONDecodeError) <span class="k">as</span> error:
+                observation = {<span class="s">"error"</span>: str(error)}
+            trace.add(<span class="s">"observation"</span>, json.dumps(observation, sort_keys=<span class="k">True</span>, default=str))
+
+            <span class="k">if</span> action.name == <span class="s">"evaluate_request"</span> <span class="k">and</span> isinstance(observation, dict):
+                policy_checked = <span class="k">True</span>
+                decision = observation.get(<span class="s">"decision"</span>)
+                rule = observation.get(<span class="s">"rule"</span>)
+                <span class="k">if</span> decision:
+                    trace.add(<span class="s">"route"</span>, f<span class="s">"{decision} ({rule}) -&gt; {_ROUTES.get(decision, 'unknown route')}"</span>)
+            <span class="k">if</span> action.name == <span class="s">"flag_for_human_review"</span> <span class="k">and</span> isinstance(observation, dict):
+                review_id = observation.get(<span class="s">"review_id"</span>)
+
+            messages.append(
+                {<span class="s">"role"</span>: <span class="s">"assistant"</span>, <span class="s">"content"</span>: thought, <span class="s">"tool_calls"</span>: [action.to_dict()]}
+            )
+            messages.append(
+                {
+                    <span class="s">"role"</span>: <span class="s">"tool"</span>,
+                    <span class="s">"content"</span>: json.dumps(observation, sort_keys=<span class="k">True</span>, default=str),
+                    <span class="s">"tool_call_id"</span>: action.id,
+                }
+            )
+            <span class="k">continue</span>
+
+        draft = (response.content <span class="k">or</span> <span class="s">""</span>).strip()
+        <span class="k">if</span> <span class="k">not</span> draft:
+            trace.add(<span class="s">"error"</span>, f<span class="s">"Iteration {iteration}: empty model reply; retrying."</span>)
+            <span class="k">continue</span>
+
+        <span class="k">if</span> <span class="k">not</span> policy_checked:
+            <span class="c"># Guard: a draft may not exist before the decision tool has run.</span>
+            trace.add(<span class="s">"error"</span>, <span class="s">"Draft attempted before evaluate_request ran; bouncing back."</span>)
+            messages.append({<span class="s">"role"</span>: <span class="s">"assistant"</span>, <span class="s">"content"</span>: draft})
+            messages.append(
+                {
+                    <span class="s">"role"</span>: <span class="s">"user"</span>,
+                    <span class="s">"content"</span>: <span class="s">"Before responding, call evaluate_request with the four "</span>
+                    <span class="s">"request fields and route by its decision. Call the tool now."</span>,
+                }
+            )
+            <span class="k">continue</span>
+
+        trace.add(<span class="s">"draft"</span>, draft)
+        reflection_result = reflect(draft, trace, llm)
+        trace.add(<span class="s">"reflection"</span>, reflection_result.summary)
+        <span class="k">return</span> AgentResult(
+            request=request,
+            final_response=reflection_result.final_draft,
+            trace=trace,
+            decision=decision,
+            rule=rule,
+            review_id=review_id,
+        )
+
+    trace.add(<span class="s">"error"</span>, f<span class="s">"Max iterations ({max_iterations}) reached without a final answer."</span>)
+    <span class="k">return</span> AgentResult(
+        request=request,
+        final_response=FALLBACK_RESPONSE,
+        trace=trace,
+        decision=decision,
+        rule=rule,
+        review_id=review_id,
+    )</pre><div class="file">app/src/mcp_client.py</div><pre class="code"><span class="s">""</span><span class="s">"Stdio MCP client shared by the hand-check script and, later, the planner and reflector."</span><span class="s">""</span>
+
+<span class="k">import</span> json
+<span class="k">import</span> sys
+<span class="k">from</span> contextlib <span class="k">import</span> asynccontextmanager
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">from</span> typing <span class="k">import</span> Any
+
+<span class="k">import</span> anyio
+<span class="k">from</span> mcp.client.session <span class="k">import</span> ClientSession
+<span class="k">from</span> mcp.client.stdio <span class="k">import</span> StdioServerParameters, stdio_client
+
+SERVER_PATH = Path(__file__).resolve().parent / <span class="s">"server.py"</span>
+
+
+<span class="k">def</span> list_tools() -&gt; list[str]:
+    <span class="s">""</span><span class="s">"Launch the IT server and return the registered tool names."</span><span class="s">""</span>
+    <span class="k">return</span> anyio.run(_list_tools)
+
+
+<span class="k">def</span> call_tool(name: str, arguments: dict[str, Any]) -&gt; Any:
+    <span class="s">""</span><span class="s">"Launch the IT server, call one tool, and return its JSON result."</span><span class="s">""</span>
+    <span class="k">return</span> anyio.run(_call_tool, name, arguments)
+
+
+<span class="k">async</span> <span class="k">def</span> _list_tools() -&gt; list[str]:
+    <span class="k">async</span> <span class="k">with</span> _session() <span class="k">as</span> session:
+        listed = <span class="k">await</span> session.list_tools()
+        <span class="k">return</span> [tool.name <span class="k">for</span> tool <span class="k">in</span> listed.tools]
+
+
+<span class="k">async</span> <span class="k">def</span> _call_tool(name: str, arguments: dict[str, Any]) -&gt; Any:
+    <span class="k">async</span> <span class="k">with</span> _session() <span class="k">as</span> session:
+        result = <span class="k">await</span> session.call_tool(name, arguments)
+        <span class="k">if</span> getattr(result, <span class="s">"is_error"</span>, <span class="k">False</span>):
+            <span class="k">raise</span> RuntimeError(_error_text(result))
+        structured = getattr(result, <span class="s">"structured_content"</span>, <span class="k">None</span>)
+        <span class="k">if</span> structured <span class="k">is</span> <span class="k">not</span> <span class="k">None</span>:
+            <span class="k">return</span> structured
+        <span class="k">return</span> json.loads(_error_text(result))
+
+
+<span class="k">def</span> _error_text(result: Any) -&gt; str:
+    blocks = getattr(result, <span class="s">"content"</span>, <span class="k">None</span>) <span class="k">or</span> []
+    parts: list[str] = []
+    <span class="k">for</span> block <span class="k">in</span> blocks:
+        text = getattr(block, <span class="s">"text"</span>, <span class="k">None</span>)
+        <span class="k">if</span> text:
+            parts.append(text)
+    <span class="k">return</span> <span class="s">"\n"</span>.join(parts) <span class="k">if</span> parts <span class="k">else</span> <span class="s">"tool call failed"</span>
+
+
+@asynccontextmanager
+<span class="k">async</span> <span class="k">def</span> _session(server_path: Path | <span class="k">None</span> = <span class="k">None</span>):
+    parameters = StdioServerParameters(
+        command=sys.executable,
+        args=[str(server_path <span class="k">or</span> SERVER_PATH)],
+    )
+    <span class="k">async</span> <span class="k">with</span> stdio_client(parameters) <span class="k">as</span> streams:
+        <span class="k">async</span> <span class="k">with</span> ClientSession(streams[0], streams[1]) <span class="k">as</span> session:
+            <span class="k">await</span> session.initialize()
+            <span class="k">yield</span> session
+
+
+<span class="k">class</span> MCPClient:
+    <span class="s">""</span>"One persistent stdio server session <span class="k">for</span> a whole agent run.
+
+    The TAO loop calls several tools per request; keeping the session open
+    avoids relaunching the server <span class="k">for</span> every call. Tool schemas come back <span class="k">in</span>
+    OpenAI/Ollama function format, ready to <span class="k">pass</span> to the LLM.
+    <span class="s">""</span>"
+
+    <span class="k">def</span> __init__(<span class="k">self</span>, server_path: Path | <span class="k">None</span> = <span class="k">None</span>) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.server_path = server_path <span class="k">or</span> SERVER_PATH
+
+    <span class="k">async</span> <span class="k">def</span> __aenter__(<span class="k">self</span>) -&gt; <span class="s">"MCPClient"</span>:
+        <span class="k">self</span>._session_cm = _session(<span class="k">self</span>.server_path)
+        <span class="k">self</span>._session = <span class="k">await</span> <span class="k">self</span>._session_cm.__aenter__()
+        <span class="k">return</span> <span class="k">self</span>
+
+    <span class="k">async</span> <span class="k">def</span> __aexit__(<span class="k">self</span>, *exc_info: object) -&gt; <span class="k">None</span>:
+        <span class="k">await</span> <span class="k">self</span>._session_cm.__aexit__(*exc_info)
+
+    <span class="k">async</span> <span class="k">def</span> list_tool_schemas(<span class="k">self</span>) -&gt; list[dict[str, Any]]:
+        listed = <span class="k">await</span> <span class="k">self</span>._session.list_tools()
+        <span class="k">return</span> [
+            {
+                <span class="s">"type"</span>: <span class="s">"function"</span>,
+                <span class="s">"function"</span>: {
+                    <span class="s">"name"</span>: tool.name,
+                    <span class="s">"description"</span>: tool.description <span class="k">or</span> <span class="s">""</span>,
+                    <span class="s">"parameters"</span>: tool.input_schema,
+                },
+            }
+            <span class="k">for</span> tool <span class="k">in</span> listed.tools
+        ]
+
+    <span class="k">async</span> <span class="k">def</span> call_tool(<span class="k">self</span>, name: str, arguments: dict[str, Any]) -&gt; Any:
+        result = <span class="k">await</span> <span class="k">self</span>._session.call_tool(name, arguments)
+        <span class="k">if</span> getattr(result, <span class="s">"is_error"</span>, <span class="k">False</span>):
+            <span class="k">raise</span> RuntimeError(_error_text(result))
+        structured = getattr(result, <span class="s">"structured_content"</span>, <span class="k">None</span>)
+        <span class="k">if</span> structured <span class="k">is</span> <span class="k">not</span> <span class="k">None</span>:
+            <span class="k">return</span> structured
+        text = _error_text(result)
+        <span class="k">return</span> json.loads(text) <span class="k">if</span> text <span class="k">else</span> <span class="k">None</span></pre><div class="file">app/src/agent/llm_client.py</div><pre class="code"><span class="s">""</span><span class="s">"Ollama chat client with OpenAI-style tool calling, used by the TAO loop."</span><span class="s">""</span>
+
+<span class="k">from</span> __future__ <span class="k">import</span> annotations
+
+<span class="k">import</span> os
+<span class="k">import</span> re
+<span class="k">from</span> dataclasses <span class="k">import</span> dataclass
+<span class="k">from</span> typing <span class="k">import</span> Any
+
+<span class="k">import</span> httpx
+
+DEFAULT_HOST = <span class="s">"http://localhost:11434"</span>
+DEFAULT_MODEL = <span class="s">"qwen3:8b"</span>
+
+_THINK_RE = re.compile(r<span class="s">"&lt;think&gt;.*?&lt;/think&gt;"</span>, re.DOTALL)
+
+
+<span class="k">def</span> strip_think(text: str) -&gt; str:
+    <span class="s">""</span><span class="s">"Drop qwen3 &lt;think&gt; blocks so reasoning tokens never leak into drafts."</span><span class="s">""</span>
+    text = _THINK_RE.sub(<span class="s">""</span>, text)
+    <span class="k">if</span> <span class="s">"&lt;/think&gt;"</span> <span class="k">in</span> text:
+        text = text.split(<span class="s">"&lt;/think&gt;"</span>, 1)[1]
+    <span class="k">return</span> text.strip()
+
+
+@dataclass
+<span class="k">class</span> ToolCall:
+    id: str
+    name: str
+    arguments: dict[str, Any]
+
+    <span class="k">def</span> to_dict(<span class="k">self</span>) -&gt; dict[str, Any]:
+        <span class="k">return</span> {
+            <span class="s">"id"</span>: <span class="k">self</span>.id,
+            <span class="s">"type"</span>: <span class="s">"function"</span>,
+            <span class="s">"function"</span>: {<span class="s">"name"</span>: <span class="k">self</span>.name, <span class="s">"arguments"</span>: <span class="k">self</span>.arguments},
+        }
+
+
+@dataclass
+<span class="k">class</span> LLMResponse:
+    content: str | <span class="k">None</span>
+    tool_call: ToolCall | <span class="k">None</span> = <span class="k">None</span>
+
+    @property
+    <span class="k">def</span> has_tool_call(<span class="k">self</span>) -&gt; bool:
+        <span class="k">return</span> <span class="k">self</span>.tool_call <span class="k">is</span> <span class="k">not</span> <span class="k">None</span>
+
+
+<span class="k">class</span> OllamaClient:
+    <span class="s">""</span><span class="s">"Synchronous /api/chat client; parses tool_calls when the model emits them."</span><span class="s">""</span>
+
+    <span class="k">def</span> __init__(
+        <span class="k">self</span>,
+        host: str = DEFAULT_HOST,
+        model: str = DEFAULT_MODEL,
+        temperature: float = 0.3,
+        timeout: float = 240.0,
+        think: bool = <span class="k">False</span>,
+        keep_alive: str = <span class="s">"30m"</span>,
+    ) -&gt; <span class="k">None</span>:
+        <span class="k">self</span>.host = host.rstrip(<span class="s">"/"</span>)
+        <span class="k">self</span>.model = model
+        <span class="k">self</span>.temperature = temperature
+        <span class="k">self</span>.timeout = timeout  <span class="c"># generous: a cold start loads the model into VRAM</span>
+        <span class="k">self</span>.think = think
+        <span class="k">self</span>.keep_alive = keep_alive
+
+    @classmethod
+    <span class="k">def</span> from_env(cls) -&gt; <span class="s">"OllamaClient"</span>:
+        <span class="k">return</span> cls(
+            host=os.environ.get(<span class="s">"OLLAMA_HOST"</span>, DEFAULT_HOST),
+            model=os.environ.get(<span class="s">"OLLAMA_MODEL"</span>, DEFAULT_MODEL),
+        )
+
+    <span class="k">def</span> chat(
+        <span class="k">self</span>, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | <span class="k">None</span> = <span class="k">None</span>
+    ) -&gt; LLMResponse:
+        payload: dict[str, Any] = {
+            <span class="s">"model"</span>: <span class="k">self</span>.model,
+            <span class="s">"messages"</span>: messages,
+            <span class="s">"stream"</span>: <span class="k">False</span>,
+            <span class="s">"think"</span>: <span class="k">self</span>.think,
+            <span class="s">"keep_alive"</span>: <span class="k">self</span>.keep_alive,
+            <span class="s">"options"</span>: {<span class="s">"temperature"</span>: <span class="k">self</span>.temperature},
+        }
+        <span class="k">if</span> tools:
+            payload[<span class="s">"tools"</span>] = tools
+
+        response = httpx.post(f<span class="s">"{self.host}/api/chat"</span>, json=payload, timeout=<span class="k">self</span>.timeout)
+        response.raise_for_status()
+        message = response.json().get(<span class="s">"message"</span>, {})
+        content = strip_think(message.get(<span class="s">"content"</span>) <span class="k">or</span> <span class="s">""</span>)
+
+        calls = message.get(<span class="s">"tool_calls"</span>) <span class="k">or</span> []
+        <span class="k">if</span> calls:
+            call = calls[0]
+            function = call.get(<span class="s">"function"</span>, {})
+            <span class="k">return</span> LLMResponse(
+                content=content,
+                tool_call=ToolCall(
+                    id=call.get(<span class="s">"id"</span>) <span class="k">or</span> <span class="s">"call_1"</span>,
+                    name=function.get(<span class="s">"name"</span>, <span class="s">""</span>),
+                    arguments=function.get(<span class="s">"arguments"</span>) <span class="k">or</span> {},
+                ),
+            )
+        <span class="k">return</span> LLMResponse(content=content)</pre><div class="file">app/src/agent/reflection.py</div><pre class="code"><span class="s">""</span><span class="s">"Reflector: a second LLM pass that confirms or corrects the draft."</span><span class="s">""</span>
+
+<span class="k">from</span> __future__ <span class="k">import</span> annotations
+
+<span class="k">from</span> dataclasses <span class="k">import</span> dataclass
+<span class="k">from</span> typing <span class="k">import</span> Any
+
+<span class="k">from</span> agent.trace <span class="k">import</span> Trace
+
+REFLECTION_PROMPT = <span class="s">""</span>"You are a policy compliance reviewer <span class="k">for</span> IT equipment requests.
+
+DRAFT RESPONSE:
+{draft}
+
+TOOL OBSERVATIONS (<span class="k">from</span> the ReAct trace):
+{observations}
+
+Check the draft against the observations:
+1. Is the draft an actual message to the requester? If it <span class="k">is</span> a note about drafting, <span class="k">or</span> mentions tools, iterations, <span class="k">or</span> routing, that <span class="k">is</span> a failure: correct it into a proper message.
+2. Does it claim anything the observations do <span class="k">not</span> support?
+3. Does it state the decision <span class="k">and</span> rule exactly <span class="k">as</span> the evaluate_request tool returned them?
+4. If the request was escalated, does the handoff mention the review id <span class="k">and</span> the real reason?
+5. Does it commit to anything (approval, refusal) the data does <span class="k">not</span> clearly support?
+
+If the draft <span class="k">is</span> accurate, reply exactly: CONFIRMED
+If the draft needs fixing, reply exactly: CORRECTED: &lt;the revised draft&gt;
+<span class="s">""</span>"
+
+
+@dataclass
+<span class="k">class</span> ReflectionResult:
+    confirmed: bool
+    final_draft: str
+    original: str
+    summary: str
+
+
+<span class="k">def</span> reflect(draft: str, trace: Trace, llm: Any) -&gt; ReflectionResult:
+    <span class="s">""</span><span class="s">"Review the draft against the trace's observations; fail open to confirmed."</span><span class="s">""</span>
+    prompt = REFLECTION_PROMPT.format(draft=draft, observations=trace.observations() <span class="k">or</span> <span class="s">"(none)"</span>)
+    response = llm.chat([{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: prompt}])
+    text = (response.content <span class="k">or</span> <span class="s">""</span>).strip()
+
+    <span class="k">if</span> text.startswith(<span class="s">"CORRECTED:"</span>):
+        revised = text.removeprefix(<span class="s">"CORRECTED:"</span>).strip() <span class="k">or</span> draft
+        <span class="k">return</span> ReflectionResult(<span class="k">False</span>, revised, draft, f<span class="s">"Draft corrected: {revised}"</span>)
+    <span class="k">if</span> text.startswith(<span class="s">"CONFIRMED"</span>):
+        <span class="k">return</span> ReflectionResult(<span class="k">True</span>, draft, draft, <span class="s">"Draft confirmed against tool observations"</span>)
+    <span class="k">return</span> ReflectionResult(<span class="k">True</span>, draft, draft, <span class="s">"Reflection reply was not parseable; draft kept"</span>)</pre><div class="file">app/src/agent/trace.py</div><pre class="code"><span class="s">""</span>"Trace of Thought / Action / Observation steps.
+
+Every step <span class="k">is</span> printed <span class="k">as</span> it happens so a terminal capture doubles <span class="k">as</span> the
+submission screenshot, <span class="k">and</span> stored structurally so the Reflector can review
+the observations.
+<span class="s">""</span>"
+
+<span class="k">from</span> dataclasses <span class="k">import</span> dataclass, field
+
+_LABELS = {
+    <span class="s">"thought"</span>: <span class="s">"[THOUGHT]"</span>,
+    <span class="s">"action"</span>: <span class="s">"[ACTION]"</span>,
+    <span class="s">"observation"</span>: <span class="s">"[OBSERVATION]"</span>,
+    <span class="s">"route"</span>: <span class="s">"[ROUTE]"</span>,
+    <span class="s">"draft"</span>: <span class="s">"[DRAFT]"</span>,
+    <span class="s">"reflection"</span>: <span class="s">"[REFLECTION]"</span>,
+    <span class="s">"error"</span>: <span class="s">"[ERROR]"</span>,
+}
+
+
+@dataclass
+<span class="k">class</span> TraceStep:
+    type: str
+    content: str
+
+
+@dataclass
+<span class="k">class</span> Trace:
+    echo: bool = <span class="k">True</span>
+    steps: list[TraceStep] = field(default_factory=list)
+
+    <span class="k">def</span> add(<span class="k">self</span>, type: str, content: str) -&gt; TraceStep:
+        step = TraceStep(type, content)
+        <span class="k">self</span>.steps.append(step)
+        <span class="k">if</span> <span class="k">self</span>.echo:
+            label = _LABELS.get(type, f<span class="s">"[{type.upper()}]"</span>)
+            prefix = <span class="s">"\n"</span> <span class="k">if</span> type <span class="k">in</span> (<span class="s">"thought"</span>, <span class="s">"draft"</span>) <span class="k">else</span> <span class="s">""</span>
+            print(f<span class="s">"{prefix}{label} {content}"</span>, flush=<span class="k">True</span>)
+        <span class="k">return</span> step
+
+    <span class="k">def</span> observations(<span class="k">self</span>) -&gt; str:
+        <span class="k">return</span> <span class="s">"\n"</span>.join(step.content <span class="k">for</span> step <span class="k">in</span> <span class="k">self</span>.steps <span class="k">if</span> step.type == <span class="s">"observation"</span>)
+
+    <span class="k">def</span> to_text(<span class="k">self</span>) -&gt; str:
+        <span class="k">return</span> <span class="s">"\n"</span>.join(
+            f<span class="s">"{_LABELS.get(step.type, step.type.upper())} {step.content}"</span> <span class="k">for</span> step <span class="k">in</span> <span class="k">self</span>.steps
+        )</pre><div class="file">app/scripts/agent.py</div><pre class="code"><span class="s">""</span>"Host app: run one natural-language request through the agent.
+
+From the repo root:
+    uv run python app/scripts/agent.py <span class="s">"I need a replacement, my headphones broke"</span>
+    uv run python app/scripts/agent.py <span class="s">"&lt;request&gt;"</span> --model qwen3:8b
+<span class="s">""</span>"
+
+<span class="k">import</span> argparse
+<span class="k">import</span> sys
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / <span class="s">"src"</span>))
+
+<span class="k">from</span> agent.llm_client <span class="k">import</span> OllamaClient
+<span class="k">from</span> agent.react <span class="k">import</span> run_agent
+
+
+<span class="k">def</span> main() -&gt; <span class="k">None</span>:
+    parser = argparse.ArgumentParser(
+        description=<span class="s">"IT equipment request agent (Planner -&gt; TAO -&gt; Reflector)"</span>
+    )
+    parser.add_argument(<span class="s">"request"</span>, help=<span class="s">"natural-language equipment request"</span>)
+    parser.add_argument(<span class="s">"--host"</span>, default=<span class="k">None</span>, help=<span class="s">"Ollama host (default OLLAMA_HOST)"</span>)
+    parser.add_argument(<span class="s">"--model"</span>, default=<span class="k">None</span>, help=<span class="s">"Ollama model (default OLLAMA_MODEL)"</span>)
+    args = parser.parse_args()
+
+    env_client = OllamaClient.from_env()
+    llm = OllamaClient(host=args.host <span class="k">or</span> env_client.host, model=args.model <span class="k">or</span> env_client.model)
+
+    result = run_agent(args.request, llm=llm)
+
+    print()
+    print(<span class="s">"=== FINAL RESPONSE ==="</span>)
+    print(result.final_response)
+    summary = f<span class="s">"=== decision={result.decision} rule={result.rule}"</span>
+    <span class="k">if</span> result.review_id:
+        summary += f<span class="s">" review_id={result.review_id}"</span>
+    print(summary + <span class="s">" ==="</span>)
+
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    main()</pre></section><section><h2>6. Full ReAct traces for the 4 test requests</h2><div class="note">Full live traces (Thought &rarr; Action &rarr; Observation &rarr; Route &rarr; Draft &rarr; Reflection) for the four test requests, run against qwen3:8b and the MCP server.</div><div class="note"><b>Test request:</b> &ldquo;Hi, I&#x27;m Grace Hopper (E001). My headphones broke, so I need a replacement.&rdquo;</div><div class="file">demo/outputs/demo-approve.txt</div><pre class="term">
+[THOUGHT] (iteration 1) I need to call get_employee_info.
+[ACTION] get_employee_info({&quot;employee_id&quot;: &quot;E001&quot;})
+[OBSERVATION] {&quot;employee_id&quot;: &quot;E001&quot;, &quot;equipment&quot;: [&quot;headphones&quot;, &quot;laptop&quot;], &quot;found&quot;: true, &quot;name&quot;: &quot;Grace Hopper&quot;, &quot;role&quot;: &quot;employee&quot;, &quot;tenure_years&quot;: 14}
+
+[THOUGHT] (iteration 2) I need to call evaluate_request.
+[ACTION] evaluate_request({&quot;employee&quot;: &quot;Grace Hopper&quot;, &quot;item_requested&quot;: &quot;headphones&quot;, &quot;reason&quot;: &quot;My headphones broke, so I need a replacement.&quot;, &quot;role&quot;: &quot;employee&quot;})
+[OBSERVATION] {&quot;decision&quot;: &quot;approve&quot;, &quot;rule&quot;: &quot;headphones_replacement&quot;}
+[ROUTE] approve (headphones_replacement) -&gt; draft the approval, naming the rule
+
+[DRAFT] Your request for a replacement headphones has been approved under rule headphones_replacement, Grace Hopper. The replacement will be processed shortly. Let me know if you need anything else.
+[REFLECTION] Draft corrected: Your request for a replacement headphones has been approved under rule headphones_replacement. The replacement will be processed shortly. Let me know if you need anything else.
+
+=== FINAL RESPONSE ===
+Your request for a replacement headphones has been approved under rule headphones_replacement. The replacement will be processed shortly. Let me know if you need anything else.
+=== decision=approve rule=headphones_replacement ===</pre><div class="note"><b>Test request:</b> &ldquo;Hi, I&#x27;m Linus Torvalds (E010). I need a laptop for my work.&rdquo;</div><div class="file">demo/outputs/demo-deny.txt</div><pre class="term">
+[THOUGHT] (iteration 1) I need to call get_employee_info.
+[ACTION] get_employee_info({&quot;employee_id&quot;: &quot;E010&quot;})
+[OBSERVATION] {&quot;employee_id&quot;: &quot;E010&quot;, &quot;equipment&quot;: [&quot;laptop&quot;], &quot;found&quot;: true, &quot;name&quot;: &quot;Linus Torvalds&quot;, &quot;role&quot;: &quot;employee&quot;, &quot;tenure_years&quot;: 10}
+
+[THOUGHT] (iteration 2) I need to call evaluate_request.
+[ACTION] evaluate_request({&quot;employee&quot;: &quot;Linus Torvalds&quot;, &quot;item_requested&quot;: &quot;laptop&quot;, &quot;reason&quot;: &quot;for my work&quot;, &quot;role&quot;: &quot;employee&quot;})
+[OBSERVATION] {&quot;decision&quot;: &quot;deny&quot;, &quot;rule&quot;: &quot;employee_laptop&quot;}
+[ROUTE] deny (employee_laptop) -&gt; draft the refusal, naming the rule; do not call flag_for_human_review
+
+[DRAFT] I need to draft the denial message.
+[REFLECTION] Draft corrected: Your request for a laptop has been denied. The rule &quot;employee_laptop&quot; does not support granting laptops to employees. Please consult your manager for further assistance.
+
+=== FINAL RESPONSE ===
+Your request for a laptop has been denied. The rule &quot;employee_laptop&quot; does not support granting laptops to employees. Please consult your manager for further assistance.
+=== decision=deny rule=employee_laptop ===</pre><div class="note"><b>Test request:</b> &ldquo;Hi, I&#x27;m Ada Lovelace (E009). I&#x27;m replacing my laptop and will keep both for a week before returning the old one to IT.&rdquo;</div><div class="file">demo/outputs/demo-escalate-week-overlap.txt</div><pre class="term">
+[THOUGHT] (iteration 1) I need to call get_employee_info.
+[ACTION] get_employee_info({&quot;employee_id&quot;: &quot;E009&quot;})
+[OBSERVATION] {&quot;employee_id&quot;: &quot;E009&quot;, &quot;equipment&quot;: [&quot;phone&quot;, &quot;laptop&quot;], &quot;found&quot;: true, &quot;name&quot;: &quot;Ada Lovelace&quot;, &quot;role&quot;: &quot;manager&quot;, &quot;tenure_years&quot;: 6}
+
+[THOUGHT] (iteration 2) I need to call evaluate_request.
+[ACTION] evaluate_request({&quot;employee&quot;: &quot;Ada Lovelace&quot;, &quot;item_requested&quot;: &quot;laptop&quot;, &quot;reason&quot;: &quot;I&#x27;m replacing my laptop and will keep both for a week before returning the old one to IT.&quot;, &quot;role&quot;: &quot;manager&quot;})
+[OBSERVATION] {&quot;decision&quot;: &quot;escalate&quot;, &quot;rule&quot;: &quot;laptop_week_overlap&quot;}
+[ROUTE] escalate (laptop_week_overlap) -&gt; call flag_for_human_review, then draft the handoff with the review id
+
+[THOUGHT] (iteration 3) I need to call flag_for_human_review.
+[ACTION] flag_for_human_review({&quot;employee_id&quot;: &quot;E009&quot;, &quot;reason&quot;: &quot;Replacing laptop and keeping both for a week before returning the old one to IT&quot;, &quot;request&quot;: &quot;laptop&quot;})
+[OBSERVATION] {&quot;employee_id&quot;: &quot;E009&quot;, &quot;reason&quot;: &quot;Replacing laptop and keeping both for a week before returning the old one to IT&quot;, &quot;request&quot;: &quot;laptop&quot;, &quot;review_id&quot;: &quot;R001&quot;, &quot;status&quot;: &quot;escalated&quot;}
+
+[DRAFT] Your request for a laptop has been escalated for human review. The review ID is R001. We will notify you once a decision is made. Thank you for your understanding, Ada Lovelace.
+[REFLECTION] Draft corrected: Your request for a laptop has been escalated for human review. The review ID is R001. The reason for escalation is that you are replacing your laptop and will keep both for a week before returning the old one to IT. We will notify you once a decision is made. Thank you for your understanding, Ada Lovelace.
+
+=== FINAL RESPONSE ===
+Your request for a laptop has been escalated for human review. The review ID is R001. The reason for escalation is that you are replacing your laptop and will keep both for a week before returning the old one to IT. We will notify you once a decision is made. Thank you for your understanding, Ada Lovelace.
+=== decision=escalate rule=laptop_week_overlap review_id=R001 ===</pre><div class="note"><b>Test request:</b> &ldquo;Hi, I&#x27;m Radia Perlman (E005). I need a second phone since I don&#x27;t have one right now.&rdquo;</div><div class="file">demo/outputs/demo-escalate-unclear.txt</div><pre class="term">
+[THOUGHT] (iteration 1) I need to call get_employee_info.
+[ACTION] get_employee_info({&quot;employee_id&quot;: &quot;E005&quot;})
+[OBSERVATION] {&quot;employee_id&quot;: &quot;E005&quot;, &quot;equipment&quot;: [&quot;phone&quot;, &quot;laptop&quot;], &quot;found&quot;: true, &quot;name&quot;: &quot;Radia Perlman&quot;, &quot;role&quot;: &quot;employee&quot;, &quot;tenure_years&quot;: 9}
+
+[THOUGHT] (iteration 2) I need to call evaluate_request.
+[ACTION] evaluate_request({&quot;employee&quot;: &quot;Radia Perlman&quot;, &quot;item_requested&quot;: &quot;phone&quot;, &quot;reason&quot;: &quot;I need a second phone since I don&#x27;t have one right now.&quot;, &quot;role&quot;: &quot;employee&quot;})
+[OBSERVATION] {&quot;decision&quot;: &quot;escalate&quot;, &quot;rule&quot;: &quot;unclear_reason&quot;}
+[ROUTE] escalate (unclear_reason) -&gt; call flag_for_human_review, then draft the handoff with the review id
+
+[THOUGHT] (iteration 3) I need to call flag_for_human_review.
+[ACTION] flag_for_human_review({&quot;employee_id&quot;: &quot;E005&quot;, &quot;reason&quot;: &quot;I need a second phone since I don&#x27;t have one right now.&quot;, &quot;request&quot;: &quot;second phone&quot;})
+[OBSERVATION] {&quot;employee_id&quot;: &quot;E005&quot;, &quot;reason&quot;: &quot;I need a second phone since I don&#x27;t have one right now.&quot;, &quot;request&quot;: &quot;second phone&quot;, &quot;review_id&quot;: &quot;R001&quot;, &quot;status&quot;: &quot;escalated&quot;}
+
+[DRAFT] Your request for a second phone has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience, Radia.
+[REFLECTION] Draft corrected: Your request for a second phone has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience, Radia.
+
+=== FINAL RESPONSE ===
+Your request for a second phone has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience, Radia.
+=== decision=escalate rule=unclear_reason review_id=R001 ===</pre></section><section><h2>7. Final decision / response for each of the 4 requests</h2><div class="note">The final response returned to the requester for each of the four test requests, with the routed decision, rule id, and review id where applicable.</div><div class="note"><b>approve request</b></div><pre class="term">Your request for a replacement headphones has been approved under rule headphones_replacement. The replacement will be processed shortly. Let me know if you need anything else.
+=== decision=approve rule=headphones_replacement ===</pre><div class="note"><b>deny request</b></div><pre class="term">Your request for a laptop has been denied. The rule &quot;employee_laptop&quot; does not support granting laptops to employees. Please consult your manager for further assistance.
+=== decision=deny rule=employee_laptop ===</pre><div class="note"><b>week-overlap request</b></div><pre class="term">Your request for a laptop has been escalated for human review. The review ID is R001. The reason for escalation is that you are replacing your laptop and will keep both for a week before returning the old one to IT. We will notify you once a decision is made. Thank you for your understanding, Ada Lovelace.
+=== decision=escalate rule=laptop_week_overlap review_id=R001 ===</pre><div class="note"><b>unclear request</b></div><pre class="term">Your request for a second phone has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience, Radia.
+=== decision=escalate rule=unclear_reason review_id=R001 ===</pre></section><section><h2>8. Evidence of the reflection step</h2><div class="note"><b>deny request</b> &mdash; Draft was a meta-note; the Reflector rewrote it into a real refusal:</div><pre class="term">[DRAFT]I need to draft the denial message.
+[REFLECTION] Draft corrected: Your request for a laptop has been denied. The rule &quot;employee_laptop&quot; does not support granting laptops to employees. Please consult your manager for further assistance.</pre><div class="note"><b>week-overlap request</b> &mdash; Draft omitted the escalation reason; the Reflector added it:</div><pre class="term">[DRAFT]Your request for a laptop has been escalated for human review. The review ID is R001. We will notify you once a decision is made. Thank you for your understanding, Ada Lovelace.
+[REFLECTION] Draft corrected: Your request for a laptop has been escalated for human review. The review ID is R001. The reason for escalation is that you are replacing your laptop and will keep both for a week before returning the old one to IT. We will notify you once a decision is made. Thank you for your understanding, Ada Lovelace.</pre></section><section><h2>9. Passing pipeline run</h2><div class="file">demo/outputs/ci-run.txt</div><pre class="term">
+✓ master ci · 36968555626
+Triggered via push less than a minute ago
+
+JOBS
+✓ test in 10s (ID 110717504019)
+
+ANNOTATIONS
+! Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, astral-sh/setup-uv@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+test: .github#2
+
+- &quot;The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748&quot;
+test: .github#1
+
+
+For more information about the job, try: gh run view --job=110717504019
+View this run on GitHub: https://github.com/kenmann01/it-service-mcp/actions/runs/36968555626</pre><div class="file">demo/outputs/pool-results.txt</div><pre class="term">RESULTS (24 cases)
+========================================================================
+id                                           expected  got       rule                         status     sec
+------------------------------------------------------------------------------------------------------------
+approve-01-headphones-replacement            approve   approve   headphones_replacement       OK          13
+approve-02-headphones-first                  approve   approve   headphones_first             OK          13
+approve-03-employee-phone-replacement        approve   approve   employee_phone_replacement   OK          14
+approve-04-manager-headphones-replacement    approve   approve   headphones_replacement       OK          16
+approve-05-manager-phone-first               approve   approve   manager_phone_first          OK          14
+approve-06-director-phone-replacement        approve   approve   manager_phone_replacement    OK          14
+deny-01-employee-laptop                      deny      deny      employee_laptop              OK          14
+deny-02-employee-phone-second                deny      deny      employee_phone_second        OK          17
+deny-03-headphones-spare                     deny      deny      headphones_second            OK          15
+deny-04-director-phone-second                deny      deny      manager_phone_second         OK          14
+deny-05-manager-laptop                       deny      deny      laptop_not_covered           OK          15
+deny-06-headphones-extra                     deny      deny      headphones_second            OK          14
+escalate-1-01-unknown-role                   escalate  escalate  blank_field                  OK          18
+escalate-1-02-blank-reason                   escalate  escalate  blank_field                  OK          19
+escalate-1-03-unclear-contradiction          escalate  escalate  unclear_reason               OK          20
+escalate-1-04-employee-phone-first           escalate  escalate  employee_phone_first         OK          20
+escalate-1-05-unknown-item                   escalate  escalate  unknown_item                 OK          19
+escalate-1-06-no-signal                      escalate  escalate  unclear_reason               OK          20
+escalate-2-01-manager-laptop-week-overlap    escalate  escalate  laptop_week_overlap          OK          20
+escalate-2-02-manager-laptop-7-days          escalate  escalate  laptop_week_overlap          OK          21
+escalate-2-03-director-laptop-week-overlap   escalate  escalate  laptop_week_overlap          OK          20
+escalate-2-04-manager-phone-week-overlap     escalate  escalate  unclear_reason               OK          19
+escalate-2-05-headphones-week-overlap        escalate  escalate  unclear_reason               OK          21
+escalate-2-06-director-laptop-handback       escalate  escalate  laptop_week_overlap          OK          21
+------------------------------------------------------------------------------------------------------------
+matched expectations: 24/24
+  clear_approve: 6/6 OK
+  clear_deny: 6/6 OK
+  escalate_ambiguous: 6/6 OK
+  escalate_week_overlap: 6/6 OK</pre></section></body></html>
