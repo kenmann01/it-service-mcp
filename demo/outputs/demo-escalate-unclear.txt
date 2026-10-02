@@ -20,9 +20,9 @@
 [ACTION] flag_for_human_review({"employee_id": "E005", "reason": "unclear_reason", "request": "second phone"})
 [OBSERVATION] {"employee_id": "E005", "reason": "unclear_reason", "request": "second phone", "review_id": "R001", "status": "escalated"}
 
-[DRAFT] Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review ID (R001) has been assigned. You will be notified once the review is complete.
-[REFLECTION] Draft corrected: Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review ID (R001) has been assigned. You will be notified once the review is complete.
+[DRAFT] Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review has been initiated with ID R001. You will be notified once the review is complete.
+[REFLECTION] Draft corrected: Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review has been initiated with ID R001. You will be notified once the review is complete.
 
 === FINAL RESPONSE ===
-Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review ID (R001) has been assigned. You will be notified once the review is complete.
+Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review has been initiated with ID R001. You will be notified once the review is complete.
 === decision=escalate rule=unclear_reason review_id=R001 ===

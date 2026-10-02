@@ -140,7 +140,20 @@ pre.code .s { color: #0a3069; }
 pre.code .c { color: #6e7781; font-style: italic; }
 .file { font-family: Consolas, monospace; font-size: 9pt; color: #1f6feb; margin: 12px 0 0; page-break-after: avoid; break-after: avoid; }
 .note { font-size: 10pt; color: #444; margin: 8px 0 2px; }
+img.shot { display: block; width: 100%; margin: 10px 0 4px; border: 1px solid #d0d7de; border-radius: 6px; }
+.shot-caption { font-family: Consolas, monospace; font-size: 9pt; color: #1f6feb; }
 """
+
+
+def screenshot_block() -> str:
+    """Embed the local desk screenshot as the closing exhibit."""
+    return (
+        '<div class="note">The local desk (app/scripts/web.py serving app/web/index.html): one filed '
+        'request running live against the same agent and MCP server, with the streamed trace rail '
+        'and the returned decision.</div>'
+        '<img class="shot" src="demo/outputs/Screenshot.png" alt="local desk screenshot">'
+        '<div class="shot-caption">demo/outputs/Screenshot.png</div>'
+    )
 
 
 def build_html() -> str:
@@ -151,7 +164,7 @@ def build_html() -> str:
         '<div class="cover"><h1>IT Equipment Request Handler</h1>'
         '<div class="sub">Week 7 Lab &middot; MCP Server + ReAct Agent &middot; Submission</div>'
         "<table>"
-        "<tr><td>Repo</td><td>github.com/kenmann01/it-service-mcp, branch feat/agent-react</td></tr>"
+        "<tr><td>Repo</td><td>github.com/kenmann01/it-service-mcp, branch master</td></tr>"
         "<tr><td>Stack</td><td>Python 3.12+, MCP Python SDK v2 (stdio), Ollama qwen3:8b, uv, pytest</td></tr>"
         "<tr><td>Policy</td><td>16-rule deterministic procedure in evaluate_request: approve / deny / escalate</td></tr>"
         "<tr><td>Agent</td><td>Planner &rarr; TAO (Thought / Action / Observation) &rarr; Reflector, with explicit routing</td></tr>"
@@ -222,6 +235,9 @@ def build_html() -> str:
 
     # 9 pipeline
     p.append(section(9, "Passing pipeline run", item("term", "demo/outputs/ci-run.txt") + item("term", "demo/outputs/pool-results.txt")))
+
+    # 10 local desk screenshot
+    p.append(section(10, "The local desk", screenshot_block()))
 
     p.append("</body></html>")
     return "".join(p)

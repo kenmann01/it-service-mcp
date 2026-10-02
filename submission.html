@@ -19,7 +19,9 @@ pre.code .s { color: #0a3069; }
 pre.code .c { color: #6e7781; font-style: italic; }
 .file { font-family: Consolas, monospace; font-size: 9pt; color: #1f6feb; margin: 12px 0 0; page-break-after: avoid; break-after: avoid; }
 .note { font-size: 10pt; color: #444; margin: 8px 0 2px; }
-</style></head><body><div class="cover"><h1>IT Equipment Request Handler</h1><div class="sub">Week 7 Lab &middot; MCP Server + ReAct Agent &middot; Submission</div><table><tr><td>Repo</td><td>github.com/kenmann01/it-service-mcp, branch feat/agent-react</td></tr><tr><td>Stack</td><td>Python 3.12+, MCP Python SDK v2 (stdio), Ollama qwen3:8b, uv, pytest</td></tr><tr><td>Policy</td><td>16-rule deterministic procedure in evaluate_request: approve / deny / escalate</td></tr><tr><td>Agent</td><td>Planner &rarr; TAO (Thought / Action / Observation) &rarr; Reflector, with explicit routing</td></tr></table></div><section><h2>1. Requirements doc and policy rules</h2><div class="file">docs/requirements.md</div><pre class="doc"># Equipment request policy
+img.shot { display: block; width: 100%; margin: 10px 0 4px; border: 1px solid #d0d7de; border-radius: 6px; }
+.shot-caption { font-family: Consolas, monospace; font-size: 9pt; color: #1f6feb; }
+</style></head><body><div class="cover"><h1>IT Equipment Request Handler</h1><div class="sub">Week 7 Lab &middot; MCP Server + ReAct Agent &middot; Submission</div><table><tr><td>Repo</td><td>github.com/kenmann01/it-service-mcp, branch master</td></tr><tr><td>Stack</td><td>Python 3.12+, MCP Python SDK v2 (stdio), Ollama qwen3:8b, uv, pytest</td></tr><tr><td>Policy</td><td>16-rule deterministic procedure in evaluate_request: approve / deny / escalate</td></tr><tr><td>Agent</td><td>Planner &rarr; TAO (Thought / Action / Observation) &rarr; Reflector, with explicit routing</td></tr></table></div><section><h2>1. Requirements doc and policy rules</h2><div class="file">docs/requirements.md</div><pre class="doc"># Equipment request policy
 
 This document is the only source of truth for an equipment request. Decide each request by the procedure below. Do not add rules about monitors, refresh cycles, years between replacements, cost, or inventory. The decisions are `approve`, `deny`, and `escalate`. `approve` when the policy clearly covers the request. `deny` when the policy clearly does not cover it. `escalate` when the request is ambiguous or missing information, so a human decides.
 
@@ -1496,6 +1498,53 @@ APPROVE_REQUEST = <span class="s">"Hi, I am E001 Grace Hopper. My headphones bro
         <span class="k">self</span>.assertTrue(any(<span class="s">"catalog word"</span> <span class="k">in</span> content <span class="k">for</span> content <span class="k">in</span> observations))
         <span class="k">self</span>.assertEqual(result.decision, <span class="s">"approve"</span>)
 
+    <span class="k">def</span> test_unknown_item_reaches_the_server(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="s">""</span><span class="s">"An item outside the catalog that the user wrote is decided by the server."</span><span class="s">""</span>
+        request = <span class="s">"Hi, I'm Grace Hopper (E001). My monitor arm snapped; can I get a new monitor arm?"</span>
+        mcp = FakeMCP(_responses(<span class="s">"escalate"</span>, <span class="s">"unknown_item"</span>))
+        llm = FakeLLM(
+            [
+                _call(<span class="s">"get_employee_info"</span>, <span class="s">"Finding the requester."</span>, {<span class="s">"employee_id"</span>: <span class="s">"E001"</span>}),
+                _call(<span class="s">"get_policy_limits"</span>, <span class="s">"Checking what this role may request."</span>, {<span class="s">"role"</span>: <span class="s">"employee"</span>}),
+                _call(
+                    <span class="s">"check_request_eligibility"</span>,
+                    <span class="s">"Checking whether this employee can get the item."</span>,
+                    {<span class="s">"employee_id"</span>: <span class="s">"E001"</span>, <span class="s">"item"</span>: <span class="s">"monitor arm"</span>},
+                ),
+                _call(
+                    <span class="s">"evaluate_request"</span>,
+                    <span class="s">"Applying the policy."</span>,
+                    {
+                        <span class="s">"employee"</span>: <span class="s">"Grace Hopper"</span>,
+                        <span class="s">"role"</span>: <span class="s">"employee"</span>,
+                        <span class="s">"item_requested"</span>: <span class="s">"monitor arm"</span>,
+                        <span class="s">"reason"</span>: <span class="s">"My monitor arm snapped"</span>,
+                    },
+                ),
+                _call(
+                    <span class="s">"flag_for_human_review"</span>,
+                    <span class="s">"This item needs a person."</span>,
+                    {<span class="s">"employee_id"</span>: <span class="s">"E001"</span>, <span class="s">"request"</span>: request, <span class="s">"reason"</span>: request},
+                ),
+                LLMResponse(content=<span class="s">"Grace, your monitor arm request is with IT. Review R001."</span>),
+                LLMResponse(content=<span class="s">"CONFIRMED"</span>),
+            ]
+        )
+
+        result = run_agent(request, llm=llm, mcp=mcp)
+
+        evaluated = [arguments <span class="k">for</span> name, arguments <span class="k">in</span> mcp.calls <span class="k">if</span> name == <span class="s">"evaluate_request"</span>]
+        <span class="k">self</span>.assertEqual(evaluated, [
+            {
+                <span class="s">"employee"</span>: <span class="s">"Grace Hopper"</span>,
+                <span class="s">"role"</span>: <span class="s">"employee"</span>,
+                <span class="s">"item_requested"</span>: <span class="s">"monitor arm"</span>,
+                <span class="s">"reason"</span>: request,
+            }
+        ])
+        <span class="k">self</span>.assertEqual(result.decision, <span class="s">"escalate"</span>)
+        <span class="k">self</span>.assertEqual(result.rule, <span class="s">"unknown_item"</span>)
+
     <span class="k">def</span> test_early_draft_runs_the_open_tool(<span class="k">self</span>) -&gt; <span class="k">None</span>:
         <span class="s">""</span><span class="s">"A reply before the lookup is replaced by that lookup, then the case continues."</span><span class="s">""</span>
         mcp = FakeMCP(_responses(<span class="s">"approve"</span>, <span class="s">"headphones_replacement"</span>))
@@ -1873,106 +1922,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / <span class="s">"sr
 
 
 <span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
-    unittest.main()</pre><div class="file">demo/outputs/pytest.txt</div><pre class="term">============================= test session starts ==============================
-platform linux -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0 -- /workspace/mcp-assignment/.venv/bin/python
-cachedir: .pytest_cache
-rootdir: /workspace/mcp-assignment
-configfile: pyproject.toml
-testpaths: app/tests
-plugins: anyio-4.15.1
-collecting ... collected 86 items
-
-app/tests/test_decision.py::ClassifyReasonTests::test_a_bulk_item_count_beats_replacement PASSED [  1%]
-app/tests/test_decision.py::ClassifyReasonTests::test_each_signal_class PASSED [  2%]
-app/tests/test_decision.py::ClassifyReasonTests::test_matching_ignores_case_and_outer_spaces PASSED [  3%]
-app/tests/test_decision.py::ClassifyReasonTests::test_second_plus_first_is_unclear PASSED [  4%]
-app/tests/test_decision.py::ClassifyReasonTests::test_unrecognized_reason_is_unclear PASSED [  5%]
-app/tests/test_decision.py::ClassifyReasonTests::test_week_overlap_beats_replacement PASSED [  6%]
-app/tests/test_decision.py::ClassifyReasonTests::test_week_overlap_needs_all_three_signals PASSED [  8%]
-app/tests/test_decision.py::EvaluateRequestTests::test_a_bulk_headphone_count_is_escalated PASSED [  9%]
-app/tests/test_decision.py::EvaluateRequestTests::test_blank_field_escalates PASSED [ 10%]
-app/tests/test_decision.py::EvaluateRequestTests::test_employee_laptop_is_denied PASSED [ 11%]
-app/tests/test_decision.py::EvaluateRequestTests::test_employee_phone_rules PASSED [ 12%]
-app/tests/test_decision.py::EvaluateRequestTests::test_headphones_replacement_and_first_are_approved PASSED [ 13%]
-app/tests/test_decision.py::EvaluateRequestTests::test_headphones_second_is_denied PASSED [ 15%]
-app/tests/test_decision.py::EvaluateRequestTests::test_instruction_text_in_the_reason_does_not_approve PASSED [ 16%]
-app/tests/test_decision.py::EvaluateRequestTests::test_manager_and_director_phone_rules PASSED [ 17%]
-app/tests/test_decision.py::EvaluateRequestTests::test_manager_laptop_week_overlap_escalates PASSED [ 18%]
-app/tests/test_decision.py::EvaluateRequestTests::test_normalizes_role_item_and_reason PASSED [ 19%]
-app/tests/test_decision.py::EvaluateRequestTests::test_other_manager_laptops_are_denied PASSED [ 20%]
-app/tests/test_decision.py::EvaluateRequestTests::test_unclear_and_week_overlap_reasons_escalate PASSED [ 22%]
-app/tests/test_decision.py::EvaluateRequestTests::test_unknown_item_escalates PASSED [ 23%]
-app/tests/test_decision.py::EvaluateRequestTests::test_unknown_role_escalates PASSED [ 24%]
-app/tests/test_decision.py::FixtureTests::test_all_fixture_cases_match_expected_decision 
-app/tests/test_decision.py::FixtureTests::test_all_fixture_cases_match_expected_decision PASSED [ 25%]
-app/tests/test_intake.py::IntakeTests::test_a_real_id_still_resolves PASSED [ 26%]
-app/tests/test_intake.py::IntakeTests::test_empty_id_and_role_miss_instead_of_raising PASSED [ 27%]
-app/tests/test_intake.py::IntakeTests::test_instruction_text_cannot_be_a_role_or_item 
-app/tests/test_intake.py::IntakeTests::test_instruction_text_cannot_be_a_role_or_item PASSED [ 29%]
-app/tests/test_intake.py::IntakeTests::test_non_string_and_nan_are_blank_results 
-app/tests/test_intake.py::IntakeTests::test_non_string_and_nan_are_blank_results PASSED [ 30%]
-app/tests/test_llm_client.py::StripThinkTests::test_closed_block_is_removed PASSED [ 31%]
-app/tests/test_llm_client.py::StripThinkTests::test_plain_text_is_unchanged PASSED [ 32%]
-app/tests/test_llm_client.py::StripThinkTests::test_unclosed_block_keeps_text_after_the_end_tag PASSED [ 33%]
-app/tests/test_llm_client.py::FromEnvTests::test_defaults_when_dotenv_has_no_matching_keys PASSED [ 34%]
-app/tests/test_llm_client.py::FromEnvTests::test_defaults_when_env_and_dotenv_are_absent PASSED [ 36%]
-app/tests/test_llm_client.py::FromEnvTests::test_dotenv_supplies_quoted_values_and_skips_comments PASSED [ 37%]
-app/tests/test_llm_client.py::FromEnvTests::test_init_strips_a_trailing_slash PASSED [ 38%]
-app/tests/test_llm_client.py::FromEnvTests::test_process_env_wins_over_dotenv PASSED [ 39%]
-app/tests/test_llm_client.py::ChatTests::test_missing_id_and_arguments_use_defaults PASSED [ 40%]
-app/tests/test_llm_client.py::ChatTests::test_reply_without_a_tool_call_returns_content PASSED [ 41%]
-app/tests/test_llm_client.py::ChatTests::test_tool_call_maps_id_name_and_arguments PASSED [ 43%]
-app/tests/test_mcp_client.py::ErrorTextTests::test_joins_text_blocks PASSED [ 44%]
-app/tests/test_mcp_client.py::ErrorTextTests::test_missing_content_reports_failure PASSED [ 45%]
-app/tests/test_mcp_client.py::CallBranchesTests::test_empty_text_returns_none_on_the_client PASSED [ 46%]
-app/tests/test_mcp_client.py::CallBranchesTests::test_error_result_raises PASSED [ 47%]
-app/tests/test_mcp_client.py::CallBranchesTests::test_text_json_is_parsed_when_unstructured PASSED [ 48%]
-app/tests/test_mcp_client.py::StdioTests::test_list_and_call_employee PASSED [ 50%]
-app/tests/test_mcp_client.py::StdioTests::test_persistent_session_lists_schemas_and_calls PASSED [ 51%]
-app/tests/test_react.py::ApprovePathTests::test_approve_routes_to_a_draft_without_escalation PASSED [ 52%]
-app/tests/test_react.py::ApprovePathTests::test_trace_records_tao_and_route_steps PASSED [ 53%]
-app/tests/test_react.py::EscalatePathTests::test_deny_never_calls_the_escalation_tool PASSED [ 54%]
-app/tests/test_react.py::EscalatePathTests::test_escalation_flags_for_human_review PASSED [ 55%]
-app/tests/test_react.py::LoopGuardTests::test_draft_after_policy_runs_eligibility PASSED [ 56%]
-app/tests/test_react.py::LoopGuardTests::test_early_draft_runs_the_open_tool PASSED [ 58%]
-app/tests/test_react.py::LoopGuardTests::test_empty_reply_retries PASSED [ 59%]
-app/tests/test_react.py::LoopGuardTests::test_evaluate_request_before_policy_is_not_called PASSED [ 60%]
-app/tests/test_react.py::LoopGuardTests::test_evaluate_request_keeps_the_sentence_and_the_file_role PASSED [ 61%]
-app/tests/test_react.py::LoopGuardTests::test_item_missing_from_the_sentence_is_an_observation PASSED [ 62%]
-app/tests/test_react.py::LoopGuardTests::test_max_iterations_returns_the_fallback PASSED [ 63%]
-app/tests/test_react.py::LoopGuardTests::test_non_finite_role_is_a_blank_field_not_an_error PASSED [ 65%]
-app/tests/test_react.py::LoopGuardTests::test_tool_error_is_recorded_and_the_run_continues PASSED [ 66%]
-app/tests/test_react.py::LoopGuardTests::test_unknown_employee_opens_review_without_policy PASSED [ 67%]
-app/tests/test_react.py::LoopGuardTests::test_unnamed_request_does_not_bind_a_roster_name PASSED [ 68%]
-app/tests/test_react.py::LiveSessionTests::test_run_without_mcp_uses_the_client_session PASSED [ 69%]
-app/tests/test_react.py::ReflectionSeamTests::test_reflector_can_correct_the_draft PASSED [ 70%]
-app/tests/test_react.py::ReflectionSeamTests::test_trace_can_run_silently PASSED [ 72%]
-app/tests/test_reflection.py::ReflectTests::test_a_count_written_in_the_request_is_kept PASSED [ 73%]
-app/tests/test_reflection.py::ReflectTests::test_confirmed_keeps_the_draft PASSED [ 74%]
-app/tests/test_reflection.py::ReflectTests::test_corrected_replaces_the_draft PASSED [ 75%]
-app/tests/test_reflection.py::ReflectTests::test_empty_correction_keeps_the_original PASSED [ 76%]
-app/tests/test_reflection.py::ReflectTests::test_prompt_includes_draft_and_observations PASSED [ 77%]
-app/tests/test_reflection.py::ReflectTests::test_prompt_includes_the_request PASSED [ 79%]
-app/tests/test_reflection.py::ReflectTests::test_repeated_correction_cannot_keep_an_unstated_count PASSED [ 80%]
-app/tests/test_reflection.py::ReflectTests::test_unparseable_reply_fails_open PASSED [ 81%]
-app/tests/test_server.py::ServerRegistrationTests::test_five_tools_are_registered PASSED [ 82%]
-app/tests/test_tools.py::EmployeeInfoTests::test_known_employee PASSED   [ 83%]
-app/tests/test_tools.py::EmployeeInfoTests::test_strips_id_whitespace PASSED [ 84%]
-app/tests/test_tools.py::EmployeeInfoTests::test_unknown_employee PASSED [ 86%]
-app/tests/test_tools.py::PolicyLimitTests::test_each_role PASSED         [ 87%]
-app/tests/test_tools.py::PolicyLimitTests::test_employee_phone_period_is_replacement_only PASSED [ 88%]
-app/tests/test_tools.py::PolicyLimitTests::test_manager_phone_covers_a_first_phone PASSED [ 89%]
-app/tests/test_tools.py::PolicyLimitTests::test_unknown_role PASSED      [ 90%]
-app/tests/test_tools.py::EligibilityTests::test_does_not_use_equipment_on_file PASSED [ 91%]
-app/tests/test_tools.py::EligibilityTests::test_headphones_are_eligible_for_every_role PASSED [ 93%]
-app/tests/test_tools.py::EligibilityTests::test_laptop_is_never_eligible PASSED [ 94%]
-app/tests/test_tools.py::EligibilityTests::test_phone_is_eligible_for_every_role PASSED [ 95%]
-app/tests/test_tools.py::EligibilityTests::test_unknown_item_and_unknown_employee PASSED [ 96%]
-app/tests/test_tools.py::HumanReviewTests::test_blank_id_is_recorded_without_raising PASSED [ 97%]
-app/tests/test_tools.py::HumanReviewTests::test_pending_reviews_lists_then_clear_empties PASSED [ 98%]
-app/tests/test_tools.py::HumanReviewTests::test_two_escalations_get_distinct_ids PASSED [100%]
-
-==================== 86 passed, 20 subtests passed in 2.22s ====================</pre></section><section><h2>5. Agent code, including the MCP client connection</h2><div class="file">app/src/agent/react.py</div><pre class="code"><span class="s">""</span>"Planner -&gt; TAO -&gt; Reflector, the whiteboard pipeline.
+    unittest.main()</pre><div class="file">demo/outputs/pytest.txt</div><pre class="term">.................................................... [ 59%]
+...................................                                      [100%]
+87 passed, 20 subtests passed in 4.66s</pre></section><section><h2>5. Agent code, including the MCP client connection</h2><div class="file">app/src/agent/react.py</div><pre class="code"><span class="s">""</span>"Planner -&gt; TAO -&gt; Reflector, the whiteboard pipeline.
 
 Planner: the system prompt below; the model states its plan before acting.
 TAO: the Thought/Action/Observation loop over the MCP server's tools.
@@ -2176,6 +2128,15 @@ _ITEM_ALIASES = {
     <span class="k">return</span> <span class="k">None</span>
 
 
+<span class="k">def</span> _words_in_request(request: str, claimed: str) -&gt; bool:
+    <span class="s">""</span><span class="s">"True when every word of the claimed item appears in the request."</span><span class="s">""</span>
+    words = claimed.strip().lower().split()
+    <span class="k">if</span> <span class="k">not</span> words:
+        <span class="k">return</span> <span class="k">False</span>
+    text = request.lower()
+    <span class="k">return</span> all(re.search(rf<span class="s">"\b{re.escape(word)}\b"</span>, text) <span class="k">for</span> word <span class="k">in</span> words)
+
+
 <span class="k">def</span> _prepare_evaluate(
     arguments: dict[str, Any], request: str, employee: dict[str, Any] | <span class="k">None</span>
 ) -&gt; tuple[dict[str, Any], str | <span class="k">None</span>]:
@@ -2183,7 +2144,9 @@ _ITEM_ALIASES = {
 
     reason <span class="k">is</span> the raw sentence, so a count such <span class="k">as</span> 2000 cannot be dropped.
     role comes <span class="k">from</span> the employee lookup when that lookup found the person.
-    item_requested must be a catalog word that appears <span class="k">in</span> the sentence.
+    item_requested must be grounded <span class="k">in</span> the sentence: a catalog word <span class="k">is</span>
+    canonicalized, an item outside the catalog <span class="k">is</span> passed through so the
+    unknown_item control decides it, anything <span class="k">else</span> <span class="k">is</span> refused.
     <span class="s">""</span>"
     prepared = dict(arguments)
     prepared[<span class="s">"reason"</span>] = request
@@ -2194,10 +2157,12 @@ _ITEM_ALIASES = {
     claimed = prepared.get(<span class="s">"item_requested"</span>)
     claimed_text = claimed <span class="k">if</span> isinstance(claimed, str) <span class="k">else</span> <span class="s">""</span>
     item = _catalog_item(request, claimed_text)
-    <span class="k">if</span> item <span class="k">is</span> <span class="k">None</span>:
-        <span class="k">return</span> prepared, <span class="s">"item_requested is not a catalog word in the request"</span>
-    prepared[<span class="s">"item_requested"</span>] = item
-    <span class="k">return</span> prepared, <span class="k">None</span>
+    <span class="k">if</span> item <span class="k">is</span> <span class="k">not</span> <span class="k">None</span>:
+        prepared[<span class="s">"item_requested"</span>] = item
+        <span class="k">return</span> prepared, <span class="k">None</span>
+    <span class="k">if</span> _words_in_request(request, claimed_text):
+        <span class="k">return</span> prepared, <span class="k">None</span>
+    <span class="k">return</span> prepared, <span class="s">"item_requested is not a catalog word in the request"</span>
 
 
 <span class="k">def</span> _build_system_prompt() -&gt; str:
@@ -2966,11 +2931,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / <span class="s">"sr
 [OBSERVATION] {&quot;decision&quot;: &quot;approve&quot;, &quot;rule&quot;: &quot;headphones_replacement&quot;}
 [ROUTE] approve (headphones_replacement) -&gt; draft the approval, naming the rule
 
-[DRAFT] Your request for replacement headphones is approved under the rule &quot;headphones_replacement&quot;. This is covered under the policy, as you are eligible for a replacement pair. Your request will be processed, and the new headphones will be issued to you. Thank you for your submission.
-[REFLECTION] Draft confirmed against tool observations
+[DRAFT] Your request for a replacement headphones is approved under the rule &quot;headphones_replacement&quot;. The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.
+[REFLECTION] Draft corrected: Your request for replacement headphones is approved under the rule &quot;headphones_replacement&quot;. The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.
 
 === FINAL RESPONSE ===
-Your request for replacement headphones is approved under the rule &quot;headphones_replacement&quot;. This is covered under the policy, as you are eligible for a replacement pair. Your request will be processed, and the new headphones will be issued to you. Thank you for your submission.
+Your request for replacement headphones is approved under the rule &quot;headphones_replacement&quot;. The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.
 === decision=approve rule=headphones_replacement ===</pre><div class="note"><b>Test request:</b> &ldquo;Hi, I&#x27;m Linus Torvalds (E010). I need a laptop for my work.&rdquo;</div><div class="file">demo/outputs/demo-deny.txt</div><pre class="term">
 [THOUGHT] (iteration 1) I need to call get_employee_info.
 [ACTION] get_employee_info({&quot;employee_id&quot;: &quot;E010&quot;})
@@ -3013,14 +2978,14 @@ The request is denied under the rule &quot;employee_laptop&quot; because laptops
 [ROUTE] escalate (laptop_week_overlap) -&gt; call flag_for_human_review, then draft the handoff with the review id
 
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({&quot;employee_id&quot;: &quot;E009&quot;, &quot;reason&quot;: &quot;Requesting a second laptop while holding the first for a week is an exception. Policy requires a review.&quot;, &quot;request&quot;: &quot;Replace laptop and keep both for a week&quot;})
-[OBSERVATION] {&quot;employee_id&quot;: &quot;E009&quot;, &quot;reason&quot;: &quot;Requesting a second laptop while holding the first for a week is an exception. Policy requires a review.&quot;, &quot;request&quot;: &quot;Replace laptop and keep both for a week&quot;, &quot;review_id&quot;: &quot;R001&quot;, &quot;status&quot;: &quot;escalated&quot;}
+[ACTION] flag_for_human_review({&quot;employee_id&quot;: &quot;E009&quot;, &quot;reason&quot;: &quot;Requesting a second laptop while holding the first is an exception. The policy requires returning the old laptop before requesting a new one.&quot;, &quot;request&quot;: &quot;Replacing laptop and keeping both for a week&quot;})
+[OBSERVATION] {&quot;employee_id&quot;: &quot;E009&quot;, &quot;reason&quot;: &quot;Requesting a second laptop while holding the first is an exception. The policy requires returning the old laptop before requesting a new one.&quot;, &quot;request&quot;: &quot;Replacing laptop and keeping both for a week&quot;, &quot;review_id&quot;: &quot;R001&quot;, &quot;status&quot;: &quot;escalated&quot;}
 
-[DRAFT] Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is &quot;laptop_week_overlap.&quot; A review with ID R001 has been initiated. You will receive further instructions once the review is complete.
-[REFLECTION] Draft corrected: Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is &quot;laptop_week_overlap.&quot; A review with ID R001 has been initiated. The reason for escalation is that requesting a second laptop while holding the first for a week is an exception, and policy requires a review. You will receive further instructions once the review is complete.
+[DRAFT] Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.
+[REFLECTION] Draft corrected: Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.
 
 === FINAL RESPONSE ===
-Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is &quot;laptop_week_overlap.&quot; A review with ID R001 has been initiated. The reason for escalation is that requesting a second laptop while holding the first for a week is an exception, and policy requires a review. You will receive further instructions once the review is complete.
+Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.
 === decision=escalate rule=laptop_week_overlap review_id=R001 ===</pre><div class="note"><b>Test request:</b> &ldquo;Hi, I&#x27;m Radia Perlman (E005). I need a second phone since I don&#x27;t have one right now.&rdquo;</div><div class="file">demo/outputs/demo-escalate-unclear.txt</div><pre class="term">
 [THOUGHT] (iteration 1) I need to call get_employee_info.
 [ACTION] get_employee_info({&quot;employee_id&quot;: &quot;E005&quot;})
@@ -3043,23 +3008,23 @@ Your request to replace your laptop and keep both for a week has been escalated 
 [ACTION] flag_for_human_review({&quot;employee_id&quot;: &quot;E005&quot;, &quot;reason&quot;: &quot;unclear_reason&quot;, &quot;request&quot;: &quot;second phone&quot;})
 [OBSERVATION] {&quot;employee_id&quot;: &quot;E005&quot;, &quot;reason&quot;: &quot;unclear_reason&quot;, &quot;request&quot;: &quot;second phone&quot;, &quot;review_id&quot;: &quot;R001&quot;, &quot;status&quot;: &quot;escalated&quot;}
 
-[DRAFT] Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review ID (R001) has been assigned. You will be notified once the review is complete.
-[REFLECTION] Draft corrected: Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review ID (R001) has been assigned. You will be notified once the review is complete.
+[DRAFT] Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review has been initiated with ID R001. You will be notified once the review is complete.
+[REFLECTION] Draft corrected: Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review has been initiated with ID R001. You will be notified once the review is complete.
 
 === FINAL RESPONSE ===
-Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review ID (R001) has been assigned. You will be notified once the review is complete.
-=== decision=escalate rule=unclear_reason review_id=R001 ===</pre></section><section><h2>7. Final decision / response for each of the 4 requests</h2><div class="note">The final response returned to the requester for each of the four test requests, with the routed decision, rule id, and review id where applicable.</div><div class="note"><b>approve request</b></div><pre class="term">Your request for replacement headphones is approved under the rule &quot;headphones_replacement&quot;. This is covered under the policy, as you are eligible for a replacement pair. Your request will be processed, and the new headphones will be issued to you. Thank you for your submission.
+Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review has been initiated with ID R001. You will be notified once the review is complete.
+=== decision=escalate rule=unclear_reason review_id=R001 ===</pre></section><section><h2>7. Final decision / response for each of the 4 requests</h2><div class="note">The final response returned to the requester for each of the four test requests, with the routed decision, rule id, and review id where applicable.</div><div class="note"><b>approve request</b></div><pre class="term">Your request for replacement headphones is approved under the rule &quot;headphones_replacement&quot;. The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.
 === decision=approve rule=headphones_replacement ===</pre><div class="note"><b>deny request</b></div><pre class="term">The request is denied under the rule &quot;employee_laptop&quot; because laptops are not issued to employees.
-=== decision=deny rule=employee_laptop ===</pre><div class="note"><b>week-overlap request</b></div><pre class="term">Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is &quot;laptop_week_overlap.&quot; A review with ID R001 has been initiated. The reason for escalation is that requesting a second laptop while holding the first for a week is an exception, and policy requires a review. You will receive further instructions once the review is complete.
-=== decision=escalate rule=laptop_week_overlap review_id=R001 ===</pre><div class="note"><b>unclear request</b></div><pre class="term">Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review ID (R001) has been assigned. You will be notified once the review is complete.
-=== decision=escalate rule=unclear_reason review_id=R001 ===</pre></section><section><h2>8. Evidence of the reflection step</h2><div class="note"><b>approve request</b> &mdash; The Reflector confirmed the draft against the tool observations:</div><pre class="term">[DRAFT]Your request for replacement headphones is approved under the rule &quot;headphones_replacement&quot;. This is covered under the policy, as you are eligible for a replacement pair. Your request will be processed, and the new headphones will be issued to you. Thank you for your submission.
-[REFLECTION] Draft confirmed against tool observations</pre><div class="note"><b>week-overlap request</b> &mdash; Draft omitted the escalation reason; the Reflector added it:</div><pre class="term">[DRAFT]Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is &quot;laptop_week_overlap.&quot; A review with ID R001 has been initiated. You will receive further instructions once the review is complete.
-[REFLECTION] Draft corrected: Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is &quot;laptop_week_overlap.&quot; A review with ID R001 has been initiated. The reason for escalation is that requesting a second laptop while holding the first for a week is an exception, and policy requires a review. You will receive further instructions once the review is complete.</pre></section><section><h2>9. Passing pipeline run</h2><div class="file">demo/outputs/ci-run.txt</div><pre class="term">
-✓ master ci · 37055016804
-Triggered via push less than a minute ago
+=== decision=deny rule=employee_laptop ===</pre><div class="note"><b>week-overlap request</b></div><pre class="term">Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.
+=== decision=escalate rule=laptop_week_overlap review_id=R001 ===</pre><div class="note"><b>unclear request</b></div><pre class="term">Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review has been initiated with ID R001. You will be notified once the review is complete.
+=== decision=escalate rule=unclear_reason review_id=R001 ===</pre></section><section><h2>8. Evidence of the reflection step</h2><div class="note"><b>approve request</b> &mdash; The Reflector confirmed the draft against the tool observations:</div><pre class="term">[DRAFT]Your request for a replacement headphones is approved under the rule &quot;headphones_replacement&quot;. The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.
+[REFLECTION] Draft corrected: Your request for replacement headphones is approved under the rule &quot;headphones_replacement&quot;. The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.</pre><div class="note"><b>week-overlap request</b> &mdash; Draft omitted the escalation reason; the Reflector added it:</div><pre class="term">[DRAFT]Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.
+[REFLECTION] Draft corrected: Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.</pre></section><section><h2>9. Passing pipeline run</h2><div class="file">demo/outputs/ci-run.txt</div><pre class="term">
+✓ master ci · 37056279245
+Triggered via push about 36 minutes ago
 
 JOBS
-✓ test in 13s (ID 110997464913)
+✓ test in 11s (ID 111001657865)
 
 ANNOTATIONS
 ! Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, astral-sh/setup-uv@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
@@ -3069,38 +3034,38 @@ test: .github#2
 test: .github#1
 
 
-For more information about the job, try: gh run view --job=110997464913
-View this run on GitHub: https://github.com/kenmann01/it-service-mcp/actions/runs/37055016804</pre><div class="file">demo/outputs/pool-results.txt</div><pre class="term">RESULTS (24 cases)
+For more information about the job, try: gh run view --job=111001657865
+View this run on GitHub: https://github.com/kenmann01/it-service-mcp/actions/runs/37056279245</pre><div class="file">demo/outputs/pool-results.txt</div><pre class="term">RESULTS (24 cases)
 ========================================================================
 id                                           expected  got       rule                         status     sec
 ------------------------------------------------------------------------------------------------------------
-approve-01-headphones-replacement            approve   approve   headphones_replacement       OK          13
-approve-02-headphones-first                  approve   approve   headphones_first             OK          13
-approve-03-employee-phone-replacement        approve   approve   employee_phone_replacement   OK          14
-approve-04-manager-headphones-replacement    approve   approve   headphones_replacement       OK          16
-approve-05-manager-phone-first               approve   approve   manager_phone_first          OK          14
-approve-06-director-phone-replacement        approve   approve   manager_phone_replacement    OK          14
-deny-01-employee-laptop                      deny      deny      employee_laptop              OK          14
-deny-02-employee-phone-second                deny      deny      employee_phone_second        OK          17
-deny-03-headphones-spare                     deny      deny      headphones_second            OK          15
-deny-04-director-phone-second                deny      deny      manager_phone_second         OK          14
-deny-05-manager-laptop                       deny      deny      laptop_not_covered           OK          15
-deny-06-headphones-extra                     deny      deny      headphones_second            OK          14
-escalate-1-01-unknown-role                   escalate  escalate  blank_field                  OK          18
-escalate-1-02-blank-reason                   escalate  escalate  blank_field                  OK          19
-escalate-1-03-unclear-contradiction          escalate  escalate  unclear_reason               OK          20
-escalate-1-04-employee-phone-first           escalate  escalate  employee_phone_first         OK          20
-escalate-1-05-unknown-item                   escalate  escalate  unknown_item                 OK          19
-escalate-1-06-no-signal                      escalate  escalate  unclear_reason               OK          20
-escalate-2-01-manager-laptop-week-overlap    escalate  escalate  laptop_week_overlap          OK          20
-escalate-2-02-manager-laptop-7-days          escalate  escalate  laptop_week_overlap          OK          21
-escalate-2-03-director-laptop-week-overlap   escalate  escalate  laptop_week_overlap          OK          20
-escalate-2-04-manager-phone-week-overlap     escalate  escalate  unclear_reason               OK          19
-escalate-2-05-headphones-week-overlap        escalate  escalate  unclear_reason               OK          21
-escalate-2-06-director-laptop-handback       escalate  escalate  laptop_week_overlap          OK          21
+approve-01-headphones-replacement            approve   approve   headphones_replacement       OK           5
+approve-02-headphones-first                  approve   approve   headphones_first             OK           3
+approve-03-employee-phone-replacement        approve   approve   employee_phone_replacement   OK           5
+approve-04-manager-headphones-replacement    approve   approve   headphones_replacement       OK           4
+approve-05-manager-phone-first               approve   approve   manager_phone_first          OK           4
+approve-06-director-phone-replacement        approve   approve   manager_phone_replacement    OK           5
+deny-01-employee-laptop                      deny      deny      employee_laptop              OK           3
+deny-02-employee-phone-second                deny      deny      employee_phone_second        OK           4
+deny-03-headphones-spare                     deny      deny      headphones_second            OK           4
+deny-04-director-phone-second                deny      deny      manager_phone_second         OK           4
+deny-05-manager-laptop                       deny      deny      laptop_not_covered           OK           4
+deny-06-headphones-extra                     deny      deny      headphones_second            OK           4
+escalate-1-01-unknown-role                   escalate  escalate  subject_unresolved           OK           3
+escalate-1-02-blank-reason                   escalate  escalate  unclear_reason               OK           5
+escalate-1-03-unclear-contradiction          escalate  escalate  unclear_reason               OK           5
+escalate-1-04-employee-phone-first           escalate  escalate  employee_phone_first         OK           6
+escalate-1-05-unknown-item                   escalate  escalate  unknown_item                 OK           7
+escalate-1-06-no-signal                      escalate  escalate  unclear_reason               OK           6
+escalate-2-01-manager-laptop-week-overlap    escalate  escalate  laptop_week_overlap          OK           6
+escalate-2-02-manager-laptop-7-days          escalate  escalate  laptop_week_overlap          OK           6
+escalate-2-03-director-laptop-week-overlap   escalate  escalate  laptop_week_overlap          OK           6
+escalate-2-04-manager-phone-week-overlap     escalate  escalate  unclear_reason               OK           6
+escalate-2-05-headphones-week-overlap        escalate  escalate  unclear_reason               OK           7
+escalate-2-06-director-laptop-handback       escalate  escalate  laptop_week_overlap          OK           6
 ------------------------------------------------------------------------------------------------------------
 matched expectations: 24/24
   clear_approve: 6/6 OK
   clear_deny: 6/6 OK
   escalate_ambiguous: 6/6 OK
-  escalate_week_overlap: 6/6 OK</pre></section></body></html>
+  escalate_week_overlap: 6/6 OK</pre></section><section><h2>10. The local desk</h2><div class="note">The local desk (app/scripts/web.py serving app/web/index.html): one filed request running live against the same agent and MCP server, with the streamed trace rail and the returned decision.</div><img class="shot" src="demo/outputs/Screenshot.png" alt="local desk screenshot"><div class="shot-caption">demo/outputs/Screenshot.png</div></section></body></html>

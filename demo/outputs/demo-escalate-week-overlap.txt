@@ -17,12 +17,12 @@
 [ROUTE] escalate (laptop_week_overlap) -> call flag_for_human_review, then draft the handoff with the review id
 
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E009", "reason": "Requesting a second laptop while holding the first for a week is an exception. Policy requires a review.", "request": "Replace laptop and keep both for a week"})
-[OBSERVATION] {"employee_id": "E009", "reason": "Requesting a second laptop while holding the first for a week is an exception. Policy requires a review.", "request": "Replace laptop and keep both for a week", "review_id": "R001", "status": "escalated"}
+[ACTION] flag_for_human_review({"employee_id": "E009", "reason": "Requesting a second laptop while holding the first is an exception. The policy requires returning the old laptop before requesting a new one.", "request": "Replacing laptop and keeping both for a week"})
+[OBSERVATION] {"employee_id": "E009", "reason": "Requesting a second laptop while holding the first is an exception. The policy requires returning the old laptop before requesting a new one.", "request": "Replacing laptop and keeping both for a week", "review_id": "R001", "status": "escalated"}
 
-[DRAFT] Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is "laptop_week_overlap." A review with ID R001 has been initiated. You will receive further instructions once the review is complete.
-[REFLECTION] Draft corrected: Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is "laptop_week_overlap." A review with ID R001 has been initiated. The reason for escalation is that requesting a second laptop while holding the first for a week is an exception, and policy requires a review. You will receive further instructions once the review is complete.
+[DRAFT] Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.
+[REFLECTION] Draft corrected: Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.
 
 === FINAL RESPONSE ===
-Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is "laptop_week_overlap." A review with ID R001 has been initiated. The reason for escalation is that requesting a second laptop while holding the first for a week is an exception, and policy requires a review. You will receive further instructions once the review is complete.
+Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.
 === decision=escalate rule=laptop_week_overlap review_id=R001 ===

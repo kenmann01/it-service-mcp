@@ -1,15 +1,11 @@
 REQUEST: Hi, I'm Mani. I'd like a vanilla latte, protein goals.
 
-[ERROR] Draft attempted before evaluate_request ran; bouncing back.
-[THOUGHT] (iteration 2) I need to call evaluate_request.
-[ACTION] evaluate_request({"employee": "Mani", "item_requested": "", "reason": "protein goals", "role": ""})
-[OBSERVATION] {"decision": "escalate", "rule": "blank_field"}
-[ROUTE] escalate (blank_field) -> call flag_for_human_review, then draft the handoff with the review id
-[THOUGHT] (iteration 3) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E000", "reason": "vanilla latte, protein goals", "request": "vanilla latte, protein goals"})
-[OBSERVATION] {"employee_id": "E000", "reason": "vanilla latte, protein goals", "request": "vanilla latte, protein goals", "review_id": "R001", "status": "escalated"}
-[DRAFT] Your request for a vanilla latte and protein goals has been escalated for human review with review ID R001. We will get back to you shortly.
-[REFLECTION] Draft corrected: Your request for a vanilla latte and protein goals has been escalated for human review with review ID R001. The reason for escalation is a blank field. We will get back to you shortly.
+[ROUTE] escalate (subject_unresolved) -> call flag_for_human_review, then draft the handoff with the review id
+[THOUGHT] (iteration 1) The reply is early. Calling flag_for_human_review.
+[ACTION] flag_for_human_review({"employee_id": "unknown", "reason": "Hi, I'm Mani. I'd like a vanilla latte, protein goals.", "request": "Hi, I'm Mani. I'd like a vanilla latte, protein goals."})
+[OBSERVATION] {"employee_id": "unknown", "reason": "Hi, I'm Mani. I'd like a vanilla latte, protein goals.", "request": "Hi, I'm Mani. I'd like a vanilla latte, protein goals.", "review_id": "R001", "status": "escalated"}
+[DRAFT] The request has been escalated for human review. The review ID is R001. Please wait for further instructions.
+[REFLECTION] Draft corrected: The request has been escalated for human review. The review ID is R001. The reason for escalation is: Hi, I'm Mani. I'd like a vanilla latte, protein goals. Please wait for further instructions.
 
 FINAL RESPONSE:
-Your request for a vanilla latte and protein goals has been escalated for human review with review ID R001. The reason for escalation is a blank field. We will get back to you shortly.
+The request has been escalated for human review. The review ID is R001. The reason for escalation is: Hi, I'm Mani. I'd like a vanilla latte, protein goals. Please wait for further instructions.

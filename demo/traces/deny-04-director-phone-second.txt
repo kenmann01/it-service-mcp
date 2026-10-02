@@ -3,12 +3,18 @@ REQUEST: Hello, I'm Donald Knuth (E008). I'd like another phone; I already have 
 [THOUGHT] (iteration 1) I need to call get_employee_info.
 [ACTION] get_employee_info({"employee_id": "E008"})
 [OBSERVATION] {"employee_id": "E008", "equipment": ["headphones", "phone", "laptop"], "found": true, "name": "Donald Knuth", "role": "director", "tenure_years": 30}
-[THOUGHT] (iteration 2) I need to call evaluate_request.
-[ACTION] evaluate_request({"employee": "Donald Knuth", "item_requested": "phone", "reason": "I already have one.", "role": "director"})
+[THOUGHT] (iteration 2) I need to call get_policy_limits.
+[ACTION] get_policy_limits({"role": "director"})
+[OBSERVATION] {"eligible_for": ["headphones", "phone"], "items": {"headphones": {"eligible": true, "period": "A first pair and a replacement are covered. A second or spare pair is not."}, "laptop": {"eligible": false, "period": "Not issued. Holding both laptops for a week and then returning one is an exception. Every other laptop request is denied."}, "phone": {"eligible": true, "period": "A first phone and a replacement are covered. A second phone is not."}}, "known": true, "role": "director"}
+[THOUGHT] (iteration 3) The reply is early. Calling check_request_eligibility.
+[ACTION] check_request_eligibility({"employee_id": "E008", "item": "phone"})
+[OBSERVATION] {"eligible": true, "employee_id": "E008", "item": "phone"}
+[THOUGHT] (iteration 4) I need to call evaluate_request.
+[ACTION] evaluate_request({"employee": "E008", "item_requested": "phone", "reason": "Hello, I'm Donald Knuth (E008). I'd like another phone; I already have one.", "role": "director"})
 [OBSERVATION] {"decision": "deny", "rule": "manager_phone_second"}
 [ROUTE] deny (manager_phone_second) -> draft the refusal, naming the rule; do not call flag_for_human_review
-[DRAFT] Donald Knuth, I regret to inform you that your request for another phone has been denied. According to policy rule manager_phone_second, employees in your role are not eligible for a second phone. Thank you for your understanding.
-[REFLECTION] Draft corrected: <the revised draft>
+[DRAFT] The request is denied under the rule "manager_phone_second." A second phone is not covered by the policy. You may not request another phone.
+[REFLECTION] Draft corrected: The request is denied under the rule "manager_phone_second." A second phone is not covered by the policy. You may not request another phone.
 
 FINAL RESPONSE:
-<the revised draft>
+The request is denied under the rule "manager_phone_second." A second phone is not covered by the policy. You may not request another phone.

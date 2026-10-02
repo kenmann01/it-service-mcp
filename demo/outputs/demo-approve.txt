@@ -16,9 +16,9 @@
 [OBSERVATION] {"decision": "approve", "rule": "headphones_replacement"}
 [ROUTE] approve (headphones_replacement) -> draft the approval, naming the rule
 
-[DRAFT] Your request for replacement headphones is approved under the rule "headphones_replacement". This is covered under the policy, as you are eligible for a replacement pair. Your request will be processed, and the new headphones will be issued to you. Thank you for your submission.
-[REFLECTION] Draft confirmed against tool observations
+[DRAFT] Your request for a replacement headphones is approved under the rule "headphones_replacement". The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.
+[REFLECTION] Draft corrected: Your request for replacement headphones is approved under the rule "headphones_replacement". The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.
 
 === FINAL RESPONSE ===
-Your request for replacement headphones is approved under the rule "headphones_replacement". This is covered under the policy, as you are eligible for a replacement pair. Your request will be processed, and the new headphones will be issued to you. Thank you for your submission.
+Your request for replacement headphones is approved under the rule "headphones_replacement". The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.
 === decision=approve rule=headphones_replacement ===
