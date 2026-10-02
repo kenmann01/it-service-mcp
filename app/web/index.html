@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Internal IT Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,460;9..144,620&family=Red+Hat+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #12100e;
+      --ink-2: #1b1612;
+      --panel: #231c16;
+      --panel-2: #2c241c;
+      --brass: #e0b56a;
+      --brass-dim: #8d6840;
+      --brass-line: rgba(224, 181, 106, 0.38);
+      --paper: #f3ead7;
+      --paper-ink: #241c14;
+      --celadon: #9ddec0;
+      --oxide: #e07a5f;
+      --amber: #f0c36a;
+      --mute: #b3a28c;
+      --faint: #7d6e5c;
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+      --serif: "Fraunces", "Iowan Old Style", Palatino, serif;
+      --mono: "Red Hat Mono", ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      color: var(--paper);
+      font-family: var(--mono);
+      background:
+        radial-gradient(900px 420px at 0% -10%, rgba(224, 181, 106, 0.09), transparent 55%),
+        radial-gradient(700px 480px at 100% 0%, rgba(120, 72, 36, 0.22), transparent 50%),
+        var(--ink);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1.2fr) minmax(190px, 0.72fr);
+      overflow: hidden;
+    }
+
+    .grain {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 7;
+      opacity: 0.18;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.65'/></svg>");
+    }
+
+    header, main, .tape { position: relative; z-index: 1; }
+
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 18px 28px 14px;
+      border-bottom: 1px solid var(--brass-line);
+      animation: rise 0.7s ease both;
+    }
+    .brand { display: flex; flex-direction: column; gap: 4px; }
+    .kicker {
+      margin: 0;
+      color: var(--brass);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    h1 {
+      margin: 0;
+      font-family: var(--serif);
+      font-weight: 460;
+      font-size: clamp(32px, 4vw, 46px);
+      letter-spacing: -0.03em;
+      line-height: 0.92;
+    }
+    .hostline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--mute);
+      font-size: 12px;
+      padding-bottom: 6px;
+    }
+    .lamp {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--brass-dim);
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+    }
+    body.running .lamp {
+      background: var(--brass);
+      box-shadow: 0 0 10px var(--brass);
+    }
+    body.fault .lamp { background: var(--oxide); box-shadow: 0 0 10px var(--oxide); }
+    body.done .lamp { background: var(--celadon); box-shadow: 0 0 10px rgba(157, 222, 192, 0.7); }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+      min-height: 0;
+    }
+
+    .intake {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 18px 18px 16px 22px;
+      border-right: 1px solid var(--brass-line);
+      min-height: 0;
+      animation: rise 0.8s 0.08s ease both;
+    }
+    .slip {
+      background: var(--paper);
+      color: var(--paper-ink);
+      box-shadow: var(--shadow);
+      transform: rotate(-0.35deg);
+      padding: 14px 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+    }
+    .slip label {
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--brass-dim);
+    }
+    textarea {
+      width: 100%;
+      min-height: 148px;
+      resize: vertical;
+      border: none;
+      background: transparent;
+      color: var(--paper-ink);
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 460;
+      line-height: 1.35;
+      outline: none;
+    }
+    textarea::placeholder { color: #a89880; }
+    .file {
+      align-self: flex-start;
+      border: none;
+      background: #2a2118;
+      color: var(--paper);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+    .file:hover { background: #3a2e22; }
+    .file:disabled { opacity: 0.45; cursor: progress; }
+    .file:focus-visible, .bucket:focus-visible, .case:focus-visible, .filter:focus-visible, .plate:focus-visible {
+      outline: 2px solid var(--brass);
+      outline-offset: 2px;
+    }
+
+    .pool { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+    .buckets, .filters { display: flex; flex-wrap: wrap; gap: 6px; }
+    .bucket, .filter, .clear-pin {
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--mute);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 5px 8px;
+      cursor: pointer;
+    }
+    .bucket.on, .filter.on {
+      color: var(--paper);
+      border-bottom-color: var(--brass);
+    }
+    .cases {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      overflow: auto;
+      max-height: 132px;
+      padding-bottom: 4px;
+    }
+    .case {
+      border: 1px solid var(--brass-line);
+      background: var(--panel);
+      color: var(--paper);
+      font-family: var(--mono);
+      font-size: 11px;
+      text-align: left;
+      padding: 6px 8px;
+      cursor: pointer;
+      max-width: 100%;
+    }
+    .case small { display: block; color: var(--faint); margin-top: 2px; }
+    .case:hover, .case.on { border-color: var(--brass); }
+
+    .board {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      animation: rise 0.9s 0.12s ease both;
+    }
+    .board-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 18px 0;
+      color: var(--mute);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    #phase { color: var(--brass); }
+    .schematic-wrap {
+      flex: 1;
+      min-height: 0;
+      padding: 4px 8px 0;
+    }
+    svg.schematic { width: 100%; height: 100%; display: block; }
+    .wire {
+      fill: none;
+      stroke: #6d5434;
+      stroke-width: 1.35;
+      stroke-linecap: round;
+      opacity: 0.45;
+    }
+    .wire.hot { opacity: 1; stroke: var(--brass); stroke-width: 1.8; }
+    .wire.tone-approve { stroke: var(--celadon); }
+    .wire.tone-deny { stroke: var(--oxide); }
+    .wire.tone-escalate { stroke: var(--amber); }
+    .plate { cursor: pointer; }
+    .plate > rect {
+      fill: #1a1511;
+      stroke: var(--brass-dim);
+      stroke-width: 1.2;
+    }
+    .plate.heavy > rect { stroke-width: 1.8; }
+    .plate.lit > rect {
+      fill: #2a2118;
+      stroke: var(--brass);
+      filter: url(#glow);
+    }
+    .plate.current > rect { stroke: #f7f1e4; }
+    .plate.pinned > rect { stroke-dasharray: 3 2; }
+    .plate.heavy.lit > rect { fill: #342616; }
+    .plate[data-node="approve"].lit > rect { fill: #17241e; stroke: var(--celadon); filter: none; }
+    .plate[data-node="deny"].lit > rect { fill: #2a1612; stroke: var(--oxide); filter: none; }
+    .plate[data-node="escalate"].lit > rect { fill: #2c2412; stroke: var(--amber); filter: none; }
+    .idx { fill: var(--brass-dim); font-size: 9px; letter-spacing: 0.14em; font-family: var(--mono); }
+    .plate.lit > .idx { fill: var(--brass); }
+    .name { fill: var(--paper); font-size: 13px; font-family: var(--serif); }
+    .tool-name { fill: var(--paper); font-size: 11px; font-family: var(--mono); }
+    .caption { fill: var(--faint); font-size: 9px; font-family: var(--mono); }
+    .plate.lit > .caption { fill: var(--mute); }
+    .pill-label { fill: var(--mute); font-size: 8px; font-family: var(--mono); letter-spacing: 0.04em; }
+    .plate.lit > .pill-label { fill: var(--paper); }
+    .section-label { fill: var(--brass-dim); font-size: 9px; letter-spacing: 0.18em; font-family: var(--mono); }
+
+    .letter {
+      margin: 0 16px 12px;
+      background: var(--paper);
+      color: var(--paper-ink);
+      min-height: 108px;
+      padding: 14px 118px 14px 16px;
+      position: relative;
+      box-shadow: var(--shadow);
+      transform: rotate(-0.25deg);
+    }
+    .letter h2 {
+      margin: 4px 0 0;
+      font-family: var(--serif);
+      font-weight: 460;
+      font-size: 18px;
+      line-height: 1.35;
+    }
+    .letter .meta { margin: 8px 0 0; font-size: 11px; letter-spacing: 0.04em; color: #6d5c48; }
+    .letter .meta.mismatch { color: #8d3b2c; }
+    .stamp {
+      position: absolute;
+      right: 14px;
+      top: 16px;
+      border: 2px solid #8d6840;
+      color: #8d6840;
+      padding: 6px 8px 4px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 600;
+      transform: rotate(8deg);
+    }
+    .letter[data-decision="approve"] .stamp { color: #1f6b45; border-color: #1f6b45; }
+    .letter[data-decision="deny"] .stamp { color: #8d3b2c; border-color: #8d3b2c; }
+    .letter[data-decision="escalate"] .stamp { color: #8a5a12; border-color: #8a5a12; }
+    .letter[data-decision="fault"] .stamp { color: #8d3b2c; border-color: #8d3b2c; }
+
+    .tape {
+      border-top: 1px solid var(--brass-line);
+      background: rgba(10, 8, 7, 0.72);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      animation: rise 0.9s 0.18s ease both;
+    }
+    .tape-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 8px 18px;
+      border-bottom: 1px solid rgba(224, 181, 106, 0.16);
+    }
+    .pin-note { color: var(--brass); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .clear-pin[hidden] { display: none; }
+    .log {
+      overflow: auto;
+      padding: 8px 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .line {
+      display: grid;
+      grid-template-columns: 118px minmax(0, 1fr);
+      gap: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(224, 181, 106, 0.1);
+    }
+    .line[hidden] { display: none; }
+    .line .tag {
+      color: var(--brass);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+    }
+    .line[data-type="error"] .tag,
+    .line[data-type="error"] p { color: var(--oxide); }
+    .line[data-type="route"] .tag { color: var(--amber); }
+    .line[data-type="observation"] .tag { color: var(--celadon); }
+    .line[data-type="reflection"] .tag { color: #f7f1e4; }
+    .line.hit { background: rgba(224, 181, 106, 0.08); }
+    .line p {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: #efe6d6;
+    }
+    .empty-log {
+      color: var(--faint);
+      font-size: 12px;
+      padding: 12px 0;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      header, .intake, .board, .tape { animation: none; }
+      .slip, .letter { transform: none; }
+    }
+    @media (max-width: 980px) {
+      body { height: auto; overflow: auto; grid-template-rows: auto auto auto; }
+      main { grid-template-columns: 1fr; }
+      .intake { border-right: none; border-bottom: 1px solid var(--brass-line); }
+      .schematic-wrap { height: 420px; }
+      .tape { min-height: 320px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <p class="kicker">Internal IT Service</p>
+      <h1>Internal IT Desk</h1>
+    </div>
+    <p class="hostline"><span class="lamp" aria-hidden="true"></span><span id="host">Locating the model…</span></p>
+  </header>
+
+  <main>
+    <section class="intake" aria-label="Request intake">
+      <form class="slip" id="slip">
+        <label for="request">Equipment request</label>
+        <textarea id="request" name="request" placeholder="Who is asking, and for what?"></textarea>
+        <button class="file" id="run" type="submit">File the request</button>
+      </form>
+      <div class="pool">
+        <div class="buckets" role="tablist" aria-label="Sample buckets">
+          <button class="bucket on" type="button" data-bucket="clear_approve">Approve</button>
+          <button class="bucket" type="button" data-bucket="clear_deny">Deny</button>
+          <button class="bucket" type="button" data-bucket="escalate_ambiguous">Ambiguous</button>
+          <button class="bucket" type="button" data-bucket="escalate_week_overlap">Week overlap</button>
+        </div>
+        <div class="cases" id="cases" aria-label="Sample requests"></div>
+      </div>
+    </section>
+
+    <section class="board" aria-label="Agent and MCP reasoning">
+      <div class="board-head">
+        <span>Reasoning rail</span>
+        <span id="phase">Waiting for a request</span>
+      </div>
+      <div class="schematic-wrap">
+        <svg class="schematic" viewBox="0 0 1080 268" role="img" aria-labelledby="schematic-title">
+          <title id="schematic-title">Planner, tool calls, route, and reflector</title>
+          <defs>
+            <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#e0b56a" flood-opacity="0.85"/>
+            </filter>
+          </defs>
+          <text class="section-label" x="12" y="12">AGENT</text>
+          <text class="section-label" x="12" y="124">MCP TOOLS</text>
+
+          <path class="wire" id="wire-intake-planner" d="M140 54 H158"/>
+          <path class="wire" id="wire-planner-tao" d="M286 54 H304"/>
+          <path class="wire" id="wire-tao-route" d="M424 54 H454"/>
+          <path class="wire" id="wire-route-draft" d="M664 54 H682"/>
+          <path class="wire" id="wire-draft-reflector" d="M800 54 H818"/>
+          <path class="wire" id="wire-reflector-reply" d="M950 54 H968"/>
+          <path class="wire" id="wire-tao-get_employee_info" d="M364 92 C364 118, 107 118, 107 148"/>
+          <path class="wire" id="wire-tao-get_policy_limits" d="M364 92 C364 120, 302 120, 302 148"/>
+          <path class="wire" id="wire-tao-check_request_eligibility" d="M400 92 C430 126, 496 126, 496 148"/>
+          <path class="wire" id="wire-tao-evaluate_request" d="M410 92 C520 130, 680 112, 720 124"/>
+          <path class="wire" id="wire-tao-flag_for_human_review" d="M424 92 C560 126, 820 126, 959 148"/>
+          <path class="wire" id="wire-evaluate-route" d="M640 124 C620 108, 590 92, 560 92"/>
+
+          <g class="plate" data-node="intake" tabindex="0" role="button" transform="translate(12,16)">
+            <rect width="128" height="76"/>
+            <text class="idx" x="10" y="18">01</text>
+            <text class="name" x="10" y="44">Intake</text>
+          </g>
+          <g class="plate" data-node="planner" tabindex="0" role="button" transform="translate(158,16)">
+            <rect width="128" height="76"/>
+            <text class="idx" x="10" y="18">02</text>
+            <text class="name" x="10" y="44">Planner</text>
+          </g>
+          <g class="plate" data-node="tao" tabindex="0" role="button" transform="translate(304,16)">
+            <rect width="120" height="76"/>
+            <text class="idx" x="10" y="18">03</text>
+            <text class="name" x="10" y="44">TAO</text>
+          </g>
+          <g class="plate" data-node="route" tabindex="0" role="button" transform="translate(454,16)">
+            <rect width="210" height="76"/>
+            <text class="idx" x="10" y="22">04</text>
+            <text class="name" x="32" y="22">Route</text>
+            <g class="plate" data-node="approve" tabindex="0" role="button" transform="translate(8,34)">
+              <rect width="62" height="32"/>
+              <text class="pill-label" x="6" y="20">Approve</text>
+            </g>
+            <g class="plate" data-node="deny" tabindex="0" role="button" transform="translate(74,34)">
+              <rect width="58" height="32"/>
+              <text class="pill-label" x="14" y="20">Deny</text>
+            </g>
+            <g class="plate" data-node="escalate" tabindex="0" role="button" transform="translate(136,34)">
+              <rect width="66" height="32"/>
+              <text class="pill-label" x="6" y="20">Escalate</text>
+            </g>
+          </g>
+          <g class="plate" data-node="draft" tabindex="0" role="button" transform="translate(682,16)">
+            <rect width="118" height="76"/>
+            <text class="idx" x="10" y="18">05</text>
+            <text class="name" x="10" y="44">Draft</text>
+          </g>
+          <g class="plate" data-node="reflector" tabindex="0" role="button" transform="translate(818,16)">
+            <rect width="132" height="76"/>
+            <text class="idx" x="10" y="18">06</text>
+            <text class="name" x="10" y="44">Reflector</text>
+          </g>
+          <g class="plate" data-node="reply" tabindex="0" role="button" transform="translate(968,16)">
+            <rect width="100" height="76"/>
+            <text class="idx" x="10" y="18">07</text>
+            <text class="name" x="10" y="44">Reply</text>
+          </g>
+
+          <g class="plate" data-node="get_employee_info" tabindex="0" role="button" transform="translate(12,148)">
+            <rect width="190" height="62"/>
+            <text class="tool-name" x="10" y="22">get_employee_info</text>
+            <text class="caption" id="cap-get_employee_info" x="10" y="44">waiting</text>
+          </g>
+          <g class="plate" data-node="get_policy_limits" tabindex="0" role="button" transform="translate(214,148)">
+            <rect width="176" height="62"/>
+            <text class="tool-name" x="10" y="22">get_policy_limits</text>
+            <text class="caption" id="cap-get_policy_limits" x="10" y="44">waiting</text>
+          </g>
+          <g class="plate" data-node="check_request_eligibility" tabindex="0" role="button" transform="translate(402,148)">
+            <rect width="188" height="62"/>
+            <text class="tool-name" x="8" y="22">check_request_eligibility</text>
+            <text class="caption" id="cap-check_request_eligibility" x="8" y="44">waiting</text>
+          </g>
+          <g class="plate heavy" data-node="evaluate_request" tabindex="0" role="button" transform="translate(602,118)">
+            <rect width="236" height="98"/>
+            <text class="idx" x="10" y="18">DECIDES</text>
+            <text class="tool-name" x="10" y="40">evaluate_request</text>
+            <text class="caption" id="cap-evaluate_request" x="10" y="64">16-rule first match</text>
+          </g>
+          <g class="plate" data-node="flag_for_human_review" tabindex="0" role="button" transform="translate(850,148)">
+            <rect width="218" height="62"/>
+            <text class="tool-name" x="10" y="22">flag_for_human_review</text>
+            <text class="caption" id="cap-flag_for_human_review" x="10" y="44">waiting</text>
+          </g>
+        </svg>
+      </div>
+      <article class="letter" id="letter" data-decision="">
+        <div class="stamp" id="stamp">Open</div>
+        <p class="kicker">To the requester</p>
+        <h2 id="letter-body">The desk is clear. File a request and the rail will light as the agent works.</h2>
+        <p class="meta" id="letter-meta"></p>
+      </article>
+    </section>
+  </main>
+
+  <section class="tape" aria-label="Trace log">
+    <div class="tape-head">
+      <div class="filters" role="toolbar" aria-label="Trace filters">
+        <button class="filter on" type="button" data-type="all">All</button>
+        <button class="filter" type="button" data-type="thought">Thought</button>
+        <button class="filter" type="button" data-type="action">Action</button>
+        <button class="filter" type="button" data-type="observation">Observation</button>
+        <button class="filter" type="button" data-type="route">Route</button>
+        <button class="filter" type="button" data-type="draft">Draft</button>
+        <button class="filter" type="button" data-type="reflection">Reflection</button>
+        <button class="filter" type="button" data-type="error">Error</button>
+      </div>
+      <div>
+        <span class="pin-note" id="pin-note" hidden></span>
+        <button class="clear-pin" id="clear-pin" type="button" hidden>Clear</button>
+      </div>
+    </div>
+    <div class="log" id="log" aria-live="polite">
+      <p class="empty-log" id="empty-log">No trace yet. Issues land here in red.</p>
+    </div>
+  </section>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "animejs": "https://cdn.jsdelivr.net/npm/animejs@4.2.2/dist/bundles/anime.esm.min.js"
+      }
+    }
+  </script>
+  <script type="module">
+    let animate = null;
+    let svgDraw = null;
+    try {
+      const anime = await import("animejs");
+      animate = anime.animate;
+      svgDraw = anime.svg;
+      anime.engine.timeUnit = "s";
+    } catch (err) {
+      animate = null;
+    }
+
+    const requestField = document.querySelector("#request");
+    const runButton = document.querySelector("#run");
+    const slip = document.querySelector("#slip");
+    const casesEl = document.querySelector("#cases");
+    const hostEl = document.querySelector("#host");
+    const phaseEl = document.querySelector("#phase");
+    const letter = document.querySelector("#letter");
+    const letterBody = document.querySelector("#letter-body");
+    const letterMeta = document.querySelector("#letter-meta");
+    const stamp = document.querySelector("#stamp");
+    const logEl = document.querySelector("#log");
+    const emptyLog = document.querySelector("#empty-log");
+    const pinNote = document.querySelector("#pin-note");
+    const clearPin = document.querySelector("#clear-pin");
+
+    const TOOLS = [
+      "get_employee_info",
+      "get_policy_limits",
+      "check_request_eligibility",
+      "evaluate_request",
+      "flag_for_human_review",
+    ];
+
+    let samples = [];
+    let bucket = "clear_approve";
+    let activeCase = null;
+    let steps = [];
+    let typeFilter = "all";
+    let nodeFilter = null;
+    let lastTool = null;
+    let decisionTone = null;
+    let settled = false;
+    let source = null;
+
+    function setPhase(text) { phaseEl.textContent = text; }
+
+    function prepWires() {
+      document.querySelectorAll(".wire").forEach((path) => {
+        const len = path.getTotalLength();
+        path.dataset.len = String(len);
+      });
+    }
+
+    function drawWire(id, tone) {
+      const path = document.getElementById(id);
+      if (!path) return;
+      path.classList.add("hot");
+      path.classList.remove("tone-approve", "tone-deny", "tone-escalate");
+      if (tone) path.classList.add(`tone-${tone}`);
+      const len = Number(path.dataset.len || path.getTotalLength());
+      try {
+        if (svgDraw && animate) {
+          const drawable = svgDraw.createDrawable(path);
+          animate(drawable, { draw: "0% 100%", duration: 0.7, ease: "outQuad" });
+        } else if (animate) {
+          path.style.strokeDasharray = `${len}`;
+          animate(path, { strokeDashoffset: [len, 0], duration: 0.7, ease: "outQuad" });
+        }
+      } catch (err) {
+        path.style.strokeDashoffset = "0";
+      }
+    }
+
+    function ignite(id) {
+      const node = document.querySelector(`.plate[data-node="${id}"]`);
+      if (!node) return;
+      document.querySelectorAll(".plate.current").forEach((plate) => plate.classList.remove("current"));
+      node.classList.add("lit", "current");
+      if (animate) {
+        const rect = node.querySelector(":scope > rect");
+        if (rect) animate(rect, { strokeWidth: [1.2, 2.6, 1.7], duration: 0.55, ease: "inOutQuad" });
+      }
+    }
+
+    function resetBoard() {
+      document.body.classList.remove("running", "fault", "done");
+      document.querySelectorAll(".plate").forEach((plate) => {
+        plate.classList.remove("lit", "current", "pinned");
+      });
+      document.querySelectorAll(".wire").forEach((path) => {
+        path.classList.remove("hot", "tone-approve", "tone-deny", "tone-escalate");
+        path.style.strokeDasharray = "";
+        path.style.strokeDashoffset = "";
+      });
+      TOOLS.forEach((name) => {
+        const cap = document.getElementById(`cap-${name}`);
+        if (!cap) return;
+        cap.textContent = name === "evaluate_request" ? "16-rule first match" : "waiting";
+      });
+      steps = [];
+      lastTool = null;
+      decisionTone = null;
+      nodeFilter = null;
+      logEl.querySelectorAll(".line").forEach((line) => line.remove());
+      emptyLog.hidden = false;
+      pinNote.hidden = true;
+      clearPin.hidden = true;
+      letter.dataset.decision = "";
+      stamp.textContent = "Open";
+      letterBody.textContent = "The desk is clear. File a request and the rail will light as the agent works.";
+      letterMeta.textContent = "";
+      letterMeta.classList.remove("mismatch");
+    }
+
+    function clip(text, max) {
+      const clean = text.replace(/\s+/g, " ").trim();
+      return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
+    }
+
+    function rememberTool(name, argsText) {
+      lastTool = name;
+      const cap = document.getElementById(`cap-${name}`);
+      if (cap && argsText) cap.textContent = clip(argsText, 42);
+      ignite(name);
+      drawWire(`wire-tao-${name}`);
+    }
+
+    function addLine(step) {
+      emptyLog.hidden = true;
+      const row = document.createElement("article");
+      row.className = "line";
+      row.dataset.type = step.type;
+      if (step.tool) row.dataset.tool = step.tool;
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = step.type.toUpperCase();
+      const body = document.createElement("p");
+      body.textContent = step.content;
+      row.append(tag, body);
+      logEl.append(row);
+      steps.push({ ...step, el: row });
+      applyFilters();
+      if (!row.hidden) row.scrollIntoView({ block: "nearest" });
+    }
+
+    function matchesNode(step, id) {
+      if (id === "planner" || id === "tao") return step.type === "thought" || (id === "tao" && (step.type === "action" || step.type === "observation"));
+      if (TOOLS.includes(id)) return step.tool === id;
+      if (id === "route") return step.type === "route";
+      if (id === "approve" || id === "deny" || id === "escalate") {
+        return step.type === "route" && step.content.startsWith(id);
+      }
+      if (id === "draft") return step.type === "draft";
+      if (id === "reflector") return step.type === "reflection";
+      if (id === "reply") return step.type === "draft" || step.type === "reflection";
+      return true;
+    }
+
+    function applyFilters() {
+      let shown = 0;
+      for (const step of steps) {
+        const typeOk = step.type === "error" || typeFilter === "all" || step.type === typeFilter;
+        const nodeOk = step.type === "error" || !nodeFilter || nodeFilter === "intake" || matchesNode(step, nodeFilter);
+        const visible = typeOk && nodeOk;
+        step.el.hidden = !visible;
+        step.el.classList.toggle("hit", Boolean(nodeFilter) && nodeFilter !== "intake" && matchesNode(step, nodeFilter) && visible);
+        if (visible) shown += 1;
+      }
+      emptyLog.hidden = shown > 0;
+      if (!shown && steps.length) emptyLog.textContent = "Nothing in this slice. Errors stay listed when they exist.";
+      if (!steps.length) emptyLog.textContent = "No trace yet. Issues land here in red.";
+      const pinned = nodeFilter && nodeFilter !== "intake";
+      pinNote.hidden = !pinned;
+      clearPin.hidden = !pinned;
+      if (pinned) pinNote.textContent = `Focused on ${nodeFilter.replaceAll("_", " ")}`;
+      document.querySelectorAll(".plate").forEach((plate) => {
+        plate.classList.toggle("pinned", plate.dataset.node === nodeFilter);
+      });
+    }
+
+    function onStep(step) {
+      if (step.type === "action") {
+        const match = step.content.match(/^([A-Za-z0-9_]+)\((.*)\)$/s);
+        const name = match ? match[1] : "";
+        const args = match ? match[2] : "";
+        if (TOOLS.includes(name)) rememberTool(name, args);
+        step.tool = name;
+        setPhase(name ? `Calling ${name}` : "Calling a tool");
+      } else if (step.type === "observation") {
+        step.tool = lastTool;
+        if (lastTool) {
+          const cap = document.getElementById(`cap-${lastTool}`);
+          if (cap) cap.textContent = clip(step.content, 42);
+        }
+        setPhase("Reading the observation");
+      } else if (step.type === "thought") {
+        ignite("tao");
+        drawWire("wire-planner-tao");
+        const iter = step.content.match(/iteration (\d+)/);
+        setPhase(iter ? `TAO · iteration ${iter[1]}` : "Thinking");
+      } else if (step.type === "route") {
+        const decision = step.content.split(" ")[0];
+        decisionTone = decision;
+        ignite("route");
+        ignite(decision);
+        drawWire("wire-evaluate-route", decision);
+        drawWire("wire-tao-route", decision);
+        setPhase(`Routed ${decision}`);
+      } else if (step.type === "draft") {
+        ignite("draft");
+        drawWire("wire-route-draft", decisionTone);
+        setPhase("Drafting the reply");
+      } else if (step.type === "reflection") {
+        ignite("reflector");
+        drawWire("wire-draft-reflector");
+        setPhase("Reflector reviewing");
+      } else if (step.type === "error") {
+        document.body.classList.add("fault");
+        setPhase("Fault on the rail");
+      }
+      addLine(step);
+    }
+
+    function showLetter(decision, body, meta, mismatch) {
+      letter.dataset.decision = decision || "";
+      stamp.textContent = decision ? decision : "Filed";
+      letterBody.textContent = body;
+      letterMeta.textContent = meta;
+      letterMeta.classList.toggle("mismatch", Boolean(mismatch));
+    }
+
+    function onResult(result) {
+      settled = true;
+      ignite("reply");
+      drawWire("wire-reflector-reply", decisionTone);
+      document.body.classList.remove("running");
+      const fallback = (result.final_response || "").startsWith("Unable to reach a decision");
+      if (fallback) document.body.classList.add("fault");
+      else document.body.classList.add("done");
+      const bits = [];
+      if (result.rule) bits.push(`rule ${result.rule}`);
+      if (result.review_id) bits.push(`review ${result.review_id}`);
+      let mismatch = false;
+      if (activeCase && activeCase.expected_decision) {
+        const expected = `pool expected ${activeCase.expected_decision}` +
+          (activeCase.expected_rule ? ` · ${activeCase.expected_rule}` : "");
+        mismatch = activeCase.expected_decision !== result.decision;
+        bits.push(mismatch ? `${expected} · differs` : expected);
+      }
+      const decision = fallback ? "fault" : (result.decision || "");
+      showLetter(decision, result.final_response || "No reply was drafted.", bits.join("  ·  "), mismatch);
+      stamp.textContent = fallback ? "Halt" : (result.decision || "Filed");
+      setPhase(fallback ? "Stopped at the iteration cap" : "Reply filed");
+      setRunning(false);
+    }
+
+    function onFault(message) {
+      settled = true;
+      document.body.classList.remove("running");
+      document.body.classList.add("fault");
+      addLine({ type: "error", content: message });
+      showLetter("fault", message, "The run stopped before a decision.", false);
+      stamp.textContent = "Fault";
+      setPhase("The model or the server stopped");
+      setRunning(false);
+    }
+
+    function setRunning(on) {
+      runButton.disabled = on;
+      runButton.textContent = on ? "On the desk…" : "File the request";
+      document.body.classList.toggle("running", on);
+    }
+
+    async function fileRequest(event) {
+      event.preventDefault();
+      const request = requestField.value.trim();
+      if (!request) {
+        setPhase("Write a request first");
+        requestField.focus();
+        return;
+      }
+      if (source) source.close();
+      resetBoard();
+      settled = false;
+      setRunning(true);
+      ignite("intake");
+      ignite("planner");
+      drawWire("wire-intake-planner");
+      setPhase("Planner reading the request");
+      showLetter("", "The case is open. The rail lights as each step arrives.", "", false);
+      stamp.textContent = "Live";
+      let response;
+      try {
+        response = await fetch("/api/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ request }),
+        });
+      } catch (err) {
+        onFault("The desk could not be reached.");
+        return;
+      }
+      if (response.status === 409) {
+        setRunning(false);
+        document.body.classList.add("fault");
+        setPhase("A case is already on the desk");
+        showLetter("fault", "A case is already on the desk. Wait for it to finish.", "", false);
+        stamp.textContent = "Busy";
+        return;
+      }
+      if (!response.ok) {
+        onFault("The desk refused the request.");
+        return;
+      }
+      source = new EventSource("/api/events");
+      source.addEventListener("step", (event) => onStep(JSON.parse(event.data)));
+      source.addEventListener("result", (event) => {
+        onResult(JSON.parse(event.data));
+        source.close();
+      });
+      source.addEventListener("error", (event) => {
+        if (!event.data) return;
+        onFault(JSON.parse(event.data).message || "The run failed.");
+        source.close();
+      });
+      source.onerror = () => {
+        if (settled) {
+          source.close();
+          return;
+        }
+        if (source.readyState === EventSource.CLOSED) onFault("The desk lost the trace stream.");
+      };
+    }
+
+    function renderCases() {
+      casesEl.replaceChildren();
+      for (const item of samples.filter((row) => row.bucket === bucket)) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "case";
+        if (activeCase && activeCase.id === item.id) button.classList.add("on");
+        button.textContent = item.id;
+        const hint = document.createElement("small");
+        hint.textContent = item.expected_rule || item.expected_decision || "";
+        button.append(hint);
+        button.addEventListener("click", () => {
+          activeCase = item;
+          requestField.value = item.request;
+          renderCases();
+          setPhase("Sample loaded");
+        });
+        casesEl.append(button);
+      }
+    }
+
+    document.querySelectorAll(".bucket").forEach((button) => {
+      button.addEventListener("click", () => {
+        bucket = button.dataset.bucket;
+        document.querySelectorAll(".bucket").forEach((peer) => peer.classList.toggle("on", peer === button));
+        renderCases();
+      });
+    });
+
+    document.querySelectorAll(".filter").forEach((button) => {
+      button.addEventListener("click", () => {
+        typeFilter = button.dataset.type;
+        document.querySelectorAll(".filter").forEach((peer) => {
+          const on = peer === button;
+          peer.classList.toggle("on", on);
+          peer.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        applyFilters();
+      });
+    });
+
+    clearPin.addEventListener("click", () => {
+      nodeFilter = null;
+      applyFilters();
+    });
+
+    document.querySelectorAll(".plate").forEach((plate) => {
+      const activate = () => {
+        nodeFilter = nodeFilter === plate.dataset.node ? null : plate.dataset.node;
+        applyFilters();
+        const hit = logEl.querySelector(".line.hit");
+        if (hit) hit.scrollIntoView({ block: "nearest" });
+      };
+      plate.addEventListener("click", (event) => {
+        event.stopPropagation();
+        activate();
+      });
+      plate.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          activate();
+        }
+      });
+    });
+
+    requestField.addEventListener("input", () => {
+      if (activeCase && requestField.value !== activeCase.request) {
+        activeCase = null;
+        renderCases();
+      }
+    });
+
+    slip.addEventListener("submit", fileRequest);
+    prepWires();
+
+    fetch("/api/health")
+      .then((response) => response.json())
+      .then((health) => { hostEl.textContent = `${health.model}  ·  ${health.host}`; })
+      .catch(() => { hostEl.textContent = "Model host unread"; });
+
+    fetch("/api/samples")
+      .then((response) => response.json())
+      .then((payload) => {
+        samples = payload.cases || [];
+        renderCases();
+      })
+      .catch(() => { casesEl.textContent = "Sample pool unread."; });
+  </script>
+</body>
+</html>
