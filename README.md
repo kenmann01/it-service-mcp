@@ -54,16 +54,24 @@ docs/                    requirements.md (the spec) and policy.md
 
 ## Setup
 
-Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/). The agent also
-needs [Ollama](https://ollama.com) running locally with a model pulled
-(tests and CI never do):
+Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/). The agent calls
+[Ollama](https://ollama.com) on the host, outside this container. Tests and CI
+never start Ollama or pull a model.
+
+Pull the model on the host (not inside the container):
 
 ```bash
-uv sync
 ollama pull qwen3:8b
 ```
 
-Copy `.env.example` to `.env` to override `OLLAMA_HOST` / `OLLAMA_MODEL`.
+Then, from the repo:
+
+```bash
+uv sync
+```
+
+The client defaults to `http://host.docker.internal:11434`. Copy `.env.example`
+to `.env` only to override `OLLAMA_HOST` / `OLLAMA_MODEL`.
 
 ## Run
 
@@ -88,5 +96,5 @@ uv run python app/scripts/run_pool.py
 
 | Env var | Default | Purpose |
 |---|---|---|
-| `OLLAMA_HOST` | `http://localhost:11434` | Ollama endpoint |
+| `OLLAMA_HOST` | `http://host.docker.internal:11434` | Host Ollama endpoint (outside Docker) |
 | `OLLAMA_MODEL` | `qwen3:8b` | chat model used by the agent |
