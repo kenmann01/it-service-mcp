@@ -128,6 +128,18 @@ class StdioTests(unittest.TestCase):
         info = call_tool("get_employee_info", {"employee_id": "E001"})
         self.assertEqual(info["name"], "Grace Hopper")
         self.assertTrue(info["found"])
+        missing = call_tool("get_employee_info", {"employee_id": "NaN"})
+        self.assertFalse(missing["found"])
+        decision = call_tool(
+            "evaluate_request",
+            {
+                "employee": "NaN",
+                "role": "employee",
+                "item_requested": "headphones",
+                "reason": "broken",
+            },
+        )
+        self.assertEqual(decision, {"decision": "escalate", "rule": "blank_field"})
 
     def test_persistent_session_lists_schemas_and_calls(self) -> None:
         """MCPClient keeps one session for schemas and a tool call."""

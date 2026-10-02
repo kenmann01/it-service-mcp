@@ -120,11 +120,11 @@ class HumanReviewTests(unittest.TestCase):
         self.assertEqual(first["employee_id"], "E010")
         self.assertEqual(second["request"], "headphones")
 
-    def test_blank_fields_are_still_escalated(self) -> None:
-        """Blank fields are still recorded as escalated, unchanged."""
-        record = flag_for_human_review("  ", "  ", "  ")
+    def test_blank_id_is_recorded_without_raising(self) -> None:
+        """A blank id is still an escalated review, not a tool error."""
+        record = flag_for_human_review("  ", "laptop", "I need a laptop for my work.")
         self.assertEqual(record["status"], "escalated")
-        self.assertEqual(record["request"], "  ")
+        self.assertEqual(record["employee_id"], "")
 
     def test_pending_reviews_lists_then_clear_empties(self) -> None:
         """pending_reviews returns recorded escalations, and clear_reviews drops them."""

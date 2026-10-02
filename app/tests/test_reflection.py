@@ -73,6 +73,40 @@ class ReflectTests(unittest.TestCase):
         self.assertTrue(result.confirmed)
         self.assertEqual(result.final_draft, "The draft.")
 
+    def test_prompt_includes_the_request(self) -> None:
+        """The review prompt contains the sentence the requester wrote."""
+        llm = FakeLLM([LLMResponse(content="CONFIRMED")])
+        reflect("Draft text.", _trace_with_observation(), llm, request="My headphones broke.")
+        prompt = llm.messages[0][-1]["content"]
+        self.assertIn("My headphones broke.", prompt)
+
+    def test_repeated_correction_cannot_keep_an_unstated_count(self) -> None:
+        """A CORRECTED reply that still says 200 is filed without that count."""
+        invented = "Grace, your request for 200 new headphones is approved."
+        llm = FakeLLM(
+            [
+                LLMResponse(content=f"CORRECTED: {invented}"),
+                LLMResponse(content=f"CORRECTED: {invented}"),
+            ]
+        )
+        result = reflect(
+            invented,
+            _trace_with_observation(),
+            llm,
+            request="Hi, I'm Grace Hopper (E001). My headphones broke, so I need a replacement.",
+        )
+        self.assertNotIn("200", result.final_draft)
+        self.assertIn("headphones", result.final_draft)
+        self.assertFalse(result.confirmed)
+
+    def test_a_count_written_in_the_request_is_kept(self) -> None:
+        """A number the requester actually wrote survives the review."""
+        llm = FakeLLM([LLMResponse(content="CONFIRMED")])
+        draft = "Your request for 2 headphones is approved."
+        result = reflect(draft, _trace_with_observation(), llm, request="I need 2 headphones.")
+        self.assertEqual(result.final_draft, draft)
+        self.assertEqual(len(llm.messages), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
