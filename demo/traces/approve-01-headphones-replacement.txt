@@ -7,8 +7,8 @@ REQUEST: Hi, I'm Grace Hopper (E001). My headphones broke, so I need a replaceme
 [ACTION] evaluate_request({"employee": "Grace Hopper", "item_requested": "headphones", "reason": "My headphones broke, so I need a replacement.", "role": "employee"})
 [OBSERVATION] {"decision": "approve", "rule": "headphones_replacement"}
 [ROUTE] approve (headphones_replacement) -> draft the approval, naming the rule
-[DRAFT] Your request for a replacement headphones has been approved under rule headphones_replacement, Grace Hopper. The replacement will be processed shortly.
+[DRAFT] Your request for a replacement headphones has been approved under rule headphones_replacement, Grace Hopper. The replacement will be processed shortly. Thank you for bringing this to our attention.
 [REFLECTION] Draft confirmed against tool observations
 
 FINAL RESPONSE:
-Your request for a replacement headphones has been approved under rule headphones_replacement, Grace Hopper. The replacement will be processed shortly.
+Your request for a replacement headphones has been approved under rule headphones_replacement, Grace Hopper. The replacement will be processed shortly. Thank you for bringing this to our attention.

@@ -8,10 +8,10 @@ REQUEST: Hello, I'm Edsger Dijkstra (E012). New laptop please; I'll keep both la
 [OBSERVATION] {"decision": "escalate", "rule": "laptop_week_overlap"}
 [ROUTE] escalate (laptop_week_overlap) -> call flag_for_human_review, then draft the handoff with the review id
 [THOUGHT] (iteration 3) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E012", "reason": "I'll keep both laptops for 7 days, then return the old one.", "request": "New laptop"})
-[OBSERVATION] {"employee_id": "E012", "reason": "I'll keep both laptops for 7 days, then return the old one.", "request": "New laptop", "review_id": "R001", "status": "escalated"}
-[DRAFT] Edsger Dijkstra, your request for a new laptop has been escalated for human review. The review ID is R001. Please keep both laptops for 7 days and return the old one as planned. We will notify you once the review is complete.
-[REFLECTION] Draft corrected: Edsger Dijkstra, your request for a new laptop has been escalated for human review. The review ID is R001. Please keep both laptops for 7 days and return the old one as planned. We will notify you once the review is complete.
+[ACTION] flag_for_human_review({"employee_id": "E012", "reason": "I'll keep both laptops for 7 days, then return the old one.", "request": "New laptop please; I'll keep both laptops for 7 days, then return the old one."})
+[OBSERVATION] {"employee_id": "E012", "reason": "I'll keep both laptops for 7 days, then return the old one.", "request": "New laptop please; I'll keep both laptops for 7 days, then return the old one.", "review_id": "R001", "status": "escalated"}
+[DRAFT] Edsger Dijkstra, your request has been escalated for human review with review ID R001. The reason provided is that you plan to keep both laptops for 7 days before returning the old one. We will review your case and get back to you shortly.
+[REFLECTION] Draft corrected: Edsger Dijkstra, your request has been escalated for human review with review ID R001. The reason provided is that you plan to keep both laptops for 7 days before returning the old one. We will review your case and get back to you shortly.
 
 FINAL RESPONSE:
-Edsger Dijkstra, your request for a new laptop has been escalated for human review. The review ID is R001. Please keep both laptops for 7 days and return the old one as planned. We will notify you once the review is complete.
+Edsger Dijkstra, your request has been escalated for human review with review ID R001. The reason provided is that you plan to keep both laptops for 7 days before returning the old one. We will review your case and get back to you shortly.

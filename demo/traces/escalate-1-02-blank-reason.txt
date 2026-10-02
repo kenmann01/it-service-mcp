@@ -8,10 +8,10 @@ REQUEST: Hi, I'm Katherine Johnson (E002). I'd like to request headphones.
 [OBSERVATION] {"decision": "escalate", "rule": "blank_field"}
 [ROUTE] escalate (blank_field) -> call flag_for_human_review, then draft the handoff with the review id
 [THOUGHT] (iteration 3) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E002", "reason": "Requesting headphones", "request": "Headphones request"})
-[OBSERVATION] {"employee_id": "E002", "reason": "Requesting headphones", "request": "Headphones request", "review_id": "R001", "status": "escalated"}
-[DRAFT] Your request for headphones has been escalated for human review. It has been assigned the review ID R001. We will notify you once a decision is made. Thank you for your patience, Katherine Johnson.
-[REFLECTION] Draft corrected: Your request for headphones has been escalated for human review. It has been assigned the review ID R001. We will notify you once a decision is made. Thank you for your patience, Katherine Johnson.
+[ACTION] flag_for_human_review({"employee_id": "E002", "reason": "requesting headphones", "request": "headphones"})
+[OBSERVATION] {"employee_id": "E002", "reason": "requesting headphones", "request": "headphones", "review_id": "R001", "status": "escalated"}
+[DRAFT] Your request for headphones has been escalated for human review. A review with ID R001 has been created, and a human will make the final decision. You will be notified once the review is complete. Thank you for your request, Katherine Johnson.
+[REFLECTION] Draft corrected: Your request for headphones has been escalated for human review. A review with ID R001 has been created, and a human will make the final decision. You will be notified once the review is complete. Thank you for your request, Katherine Johnson.
 
 FINAL RESPONSE:
-Your request for headphones has been escalated for human review. It has been assigned the review ID R001. We will notify you once a decision is made. Thank you for your patience, Katherine Johnson.
+Your request for headphones has been escalated for human review. A review with ID R001 has been created, and a human will make the final decision. You will be notified once the review is complete. Thank you for your request, Katherine Johnson.

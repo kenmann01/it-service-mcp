@@ -8,10 +8,10 @@ REQUEST: Hi, I'm Grace Hopper (E001). My monitor arm snapped; can I get a new mo
 [OBSERVATION] {"decision": "escalate", "rule": "unknown_item"}
 [ROUTE] escalate (unknown_item) -> call flag_for_human_review, then draft the handoff with the review id
 [THOUGHT] (iteration 3) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E001", "reason": "Monitor arm snapped", "request": "New monitor arm"})
-[OBSERVATION] {"employee_id": "E001", "reason": "Monitor arm snapped", "request": "New monitor arm", "review_id": "R001", "status": "escalated"}
-[DRAFT] Your request for a new monitor arm has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience, Grace Hopper.
-[REFLECTION] Draft corrected: Your request for a new monitor arm has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience, Grace Hopper.
+[ACTION] flag_for_human_review({"employee_id": "E001", "reason": "My monitor arm snapped; can I get a new monitor arm?", "request": "new monitor arm"})
+[OBSERVATION] {"employee_id": "E001", "reason": "My monitor arm snapped; can I get a new monitor arm?", "request": "new monitor arm", "review_id": "R001", "status": "escalated"}
+[DRAFT] Your request for a new monitor arm has been escalated for human review with review ID R001. We will get back to you once a decision is made. Thank you for your patience, Grace Hopper.
+[REFLECTION] Draft corrected: Your request for a new monitor arm has been escalated for human review with review ID R001. We will get back to you once a decision is made. Thank you for your patience, Grace Hopper.
 
 FINAL RESPONSE:
-Your request for a new monitor arm has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience, Grace Hopper.
+Your request for a new monitor arm has been escalated for human review with review ID R001. We will get back to you once a decision is made. Thank you for your patience, Grace Hopper.

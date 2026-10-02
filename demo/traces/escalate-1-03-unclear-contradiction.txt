@@ -8,10 +8,10 @@ REQUEST: Hi, I'm Radia Perlman (E005). I need a second phone since I don't have 
 [OBSERVATION] {"decision": "escalate", "rule": "unclear_reason"}
 [ROUTE] escalate (unclear_reason) -> call flag_for_human_review, then draft the handoff with the review id
 [THOUGHT] (iteration 3) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E005", "reason": "I need a second phone since I don't have one right now.", "request": "second phone"})
-[OBSERVATION] {"employee_id": "E005", "reason": "I need a second phone since I don't have one right now.", "request": "second phone", "review_id": "R001", "status": "escalated"}
-[DRAFT] Your request for a second phone has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience, Radia.
-[REFLECTION] Draft corrected: Your request for a second phone has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience, Radia.
+[ACTION] flag_for_human_review({"employee_id": "E005", "reason": "I don't have one right now", "request": "I need a second phone since I don't have one right now."})
+[OBSERVATION] {"employee_id": "E005", "reason": "I don't have one right now", "request": "I need a second phone since I don't have one right now.", "review_id": "R001", "status": "escalated"}
+[DRAFT] Hi Radia, your request for a second phone has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience.
+[REFLECTION] Draft corrected: Hi Radia, your request for a second phone has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience.
 
 FINAL RESPONSE:
-Your request for a second phone has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience, Radia.
+Hi Radia, your request for a second phone has been escalated for human review. The review ID is R001. A human will assess your request and get back to you shortly. Thank you for your patience.

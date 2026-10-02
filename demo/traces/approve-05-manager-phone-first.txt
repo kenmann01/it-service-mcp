@@ -7,8 +7,8 @@ REQUEST: Hello, I'm Barbara Liskov (E007). I don't have a company phone yet and 
 [ACTION] evaluate_request({"employee": "Barbara Liskov", "item_requested": "phone", "reason": "I don't have a company phone yet and would like my first one.", "role": "manager"})
 [OBSERVATION] {"decision": "approve", "rule": "manager_phone_first"}
 [ROUTE] approve (manager_phone_first) -> draft the approval, naming the rule
-[DRAFT] Hello, Barbara Liskov. Your request for a company phone has been approved under rule manager_phone_first. You are now eligible for your first phone.
-[REFLECTION] Draft corrected: Hello, Barbara Liskov. Your request for a company phone has been approved under rule manager_phone_first. You are now eligible for your first phone.
+[DRAFT] Your request for a company phone has been approved. As a manager, you are eligible for your first phone under policy rule manager_phone_first. Enjoy your new device!
+[REFLECTION] Draft confirmed against tool observations
 
 FINAL RESPONSE:
-Hello, Barbara Liskov. Your request for a company phone has been approved under rule manager_phone_first. You are now eligible for your first phone.
+Your request for a company phone has been approved. As a manager, you are eligible for your first phone under policy rule manager_phone_first. Enjoy your new device!

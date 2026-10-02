@@ -7,8 +7,8 @@ REQUEST: Hi, I'm Margaret Hamilton (E004). I want a second pair of headphones as
 [ACTION] evaluate_request({"employee": "Margaret Hamilton", "item_requested": "headphones", "reason": "as a spare while I keep my current ones", "role": "director"})
 [OBSERVATION] {"decision": "deny", "rule": "headphones_second"}
 [ROUTE] deny (headphones_second) -> draft the refusal, naming the rule; do not call flag_for_human_review
-[DRAFT] Margaret Hamilton, your request for a second pair of headphones has been denied under rule headphones_second. The policy states that only one pair of headphones is allowed per employee.
-[REFLECTION] Draft corrected: Margaret Hamilton, your request for a second pair of headphones has been denied. According to the policy, only one pair of headphones is allowed per employee.
+[DRAFT] Margaret, your request for a second pair of headphones has been denied. According to policy rule headphones_second, employees are not eligible for additional headphones beyond their current equipment.
+[REFLECTION] Draft corrected: Margaret, your request for a second pair of headphones has been denied. According to policy rule headphones_second, employees are not eligible for additional headphones beyond their current equipment.
 
 FINAL RESPONSE:
-Margaret Hamilton, your request for a second pair of headphones has been denied. According to the policy, only one pair of headphones is allowed per employee.
+Margaret, your request for a second pair of headphones has been denied. According to policy rule headphones_second, employees are not eligible for additional headphones beyond their current equipment.

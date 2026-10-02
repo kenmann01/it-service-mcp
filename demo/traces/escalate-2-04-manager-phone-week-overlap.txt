@@ -10,8 +10,8 @@ REQUEST: Hello, I'm Barbara Liskov (E007). My phone needs replacing; I'd like to
 [THOUGHT] (iteration 3) I need to call flag_for_human_review.
 [ACTION] flag_for_human_review({"employee_id": "E007", "reason": "I'd like to keep both phones for a week before I return the old one.", "request": "phone"})
 [OBSERVATION] {"employee_id": "E007", "reason": "I'd like to keep both phones for a week before I return the old one.", "request": "phone", "review_id": "R001", "status": "escalated"}
-[DRAFT] Hello, Barbara Liskov. Your request for a phone has been escalated for human review. The reason provided is unclear, and a review ID R001 has been assigned. Please wait for further updates.
-[REFLECTION] Draft corrected: Hello, Barbara Liskov. Your request for a phone has been escalated for human review. The reason provided is unclear. A review ID R001 has been assigned. Please wait for further updates.
+[DRAFT] Your request for a phone has been escalated for human review. The review ID is R001. A human will assess your request and provide a final decision. Thank you for your understanding.
+[REFLECTION] Draft corrected: Your request for a phone has been escalated for human review. The review ID is R001. A human will assess your request and provide a final decision. Thank you for your understanding.
 
 FINAL RESPONSE:
-Hello, Barbara Liskov. Your request for a phone has been escalated for human review. The reason provided is unclear. A review ID R001 has been assigned. Please wait for further updates.
+Your request for a phone has been escalated for human review. The review ID is R001. A human will assess your request and provide a final decision. Thank you for your understanding.

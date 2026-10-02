@@ -10,8 +10,8 @@ REQUEST: Hi, I'm Margaret Hamilton (E004). Replacing my laptop; I'll keep both f
 [THOUGHT] (iteration 3) I need to call flag_for_human_review.
 [ACTION] flag_for_human_review({"employee_id": "E004", "reason": "Replacing my laptop; I'll keep both for a week and return the old one to IT after migration.", "request": "laptop"})
 [OBSERVATION] {"employee_id": "E004", "reason": "Replacing my laptop; I'll keep both for a week and return the old one to IT after migration.", "request": "laptop", "review_id": "R001", "status": "escalated"}
-[DRAFT] Margaret Hamilton, your request to replace your laptop has been escalated for human review. The review ID is R001. We will notify you once a decision is made. Thank you for your understanding.
-[REFLECTION] Draft corrected: Margaret Hamilton, your request to replace your laptop has been escalated for human review. The review ID is R001. The decision was made to escalate based on the rule "laptop_week_overlap" because you stated, "Replacing my laptop; I'll keep both for a week and return the old one to IT after migration." We will notify you once a decision is made. Thank you for your understanding.
+[DRAFT] Your request for a laptop has been escalated for human review. The review ID is R001. We will notify you once a decision is made. Thank you for your understanding, Margaret.
+[REFLECTION] Draft corrected: Your request for a laptop has been escalated for human review. The review ID is R001. The reason for escalation is laptop_week_overlap. We will notify you once a decision is made. Thank you for your understanding, Margaret.
 
 FINAL RESPONSE:
-Margaret Hamilton, your request to replace your laptop has been escalated for human review. The review ID is R001. The decision was made to escalate based on the rule "laptop_week_overlap" because you stated, "Replacing my laptop; I'll keep both for a week and return the old one to IT after migration." We will notify you once a decision is made. Thank you for your understanding.
+Your request for a laptop has been escalated for human review. The review ID is R001. The reason for escalation is laptop_week_overlap. We will notify you once a decision is made. Thank you for your understanding, Margaret.

@@ -7,8 +7,8 @@ REQUEST: Hello, I'm Donald Knuth (E008). I'd like another phone; I already have 
 [ACTION] evaluate_request({"employee": "Donald Knuth", "item_requested": "phone", "reason": "I already have one.", "role": "director"})
 [OBSERVATION] {"decision": "deny", "rule": "manager_phone_second"}
 [ROUTE] deny (manager_phone_second) -> draft the refusal, naming the rule; do not call flag_for_human_review
-[DRAFT] Dear Donald Knuth, your request for another phone is denied under rule manager_phone_second. The policy states that managers are only eligible for one phone.
-[REFLECTION] Draft corrected: Dear Donald Knuth, your request for another phone is denied under rule manager_phone_second. The policy states that managers are only eligible for one phone.
+[DRAFT] Donald Knuth, I regret to inform you that your request for another phone has been denied. According to policy rule manager_phone_second, employees in your role are not eligible for a second phone. Thank you for your understanding.
+[REFLECTION] Draft corrected: <the revised draft>
 
 FINAL RESPONSE:
-Dear Donald Knuth, your request for another phone is denied under rule manager_phone_second. The policy states that managers are only eligible for one phone.
+<the revised draft>

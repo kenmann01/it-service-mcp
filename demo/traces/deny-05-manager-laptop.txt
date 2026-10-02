@@ -7,8 +7,8 @@ REQUEST: Hi, I'm Edsger Dijkstra (E012). My laptop is slow; I need a new one.
 [ACTION] evaluate_request({"employee": "Edsger Dijkstra", "item_requested": "laptop", "reason": "My laptop is slow; I need a new one.", "role": "manager"})
 [OBSERVATION] {"decision": "deny", "rule": "laptop_not_covered"}
 [ROUTE] deny (laptop_not_covered) -> draft the refusal, naming the rule; do not call flag_for_human_review
-[DRAFT] Hi, Edsger Dijkstra. Your request for a new laptop has been denied. According to policy rule laptop_not_covered, managers are not eligible for laptop replacements.
-[REFLECTION] Draft corrected: Hi Edsger Dijkstra, your request for a new laptop has been denied. According to policy rule laptop_not_covered, managers are not eligible for laptop replacements.
+[DRAFT] Edsger Dijkstra, your request for a new laptop is denied because laptops are not covered under your manager role according to policy rule laptop_not_covered.
+[REFLECTION] Draft corrected: Edsger Dijkstra, your request for a new laptop is denied because laptops are not covered under your manager role according to policy rule laptop_not_covered.
 
 FINAL RESPONSE:
-Hi Edsger Dijkstra, your request for a new laptop has been denied. According to policy rule laptop_not_covered, managers are not eligible for laptop replacements.
+Edsger Dijkstra, your request for a new laptop is denied because laptops are not covered under your manager role according to policy rule laptop_not_covered.

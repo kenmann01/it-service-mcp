@@ -10,8 +10,8 @@ REQUEST: Hello, I'm Adele Goldberg (E011). I just feel like I need new headphone
 [THOUGHT] (iteration 3) I need to call flag_for_human_review.
 [ACTION] flag_for_human_review({"employee_id": "E011", "reason": "I just feel like I need new headphones.", "request": "headphones"})
 [OBSERVATION] {"employee_id": "E011", "reason": "I just feel like I need new headphones.", "request": "headphones", "review_id": "R001", "status": "escalated"}
-[DRAFT] Your request for headphones has been escalated for human review. A review with ID R001 has been initiated to assess your request. We will notify you once a decision is made. Thank you for your understanding, Adele.
-[REFLECTION] Draft corrected: Your request for headphones has been escalated for human review. A review with ID R001 has been initiated to assess your request. The reason provided is "I just feel like I need new headphones." We will notify you once a decision is made. Thank you for your understanding, Adele.
+[DRAFT] Adele Goldberg, your request for headphones has been escalated for human review. The reason provided is unclear, and a review has been initiated with ID R001. You will be notified once a decision is made. Thank you for your understanding.
+[REFLECTION] Draft corrected: Adele Goldberg, your request for headphones has been escalated for human review. The reason provided is unclear. A review has been initiated with ID R001. You will be notified once a decision is made. Thank you for your understanding.
 
 FINAL RESPONSE:
-Your request for headphones has been escalated for human review. A review with ID R001 has been initiated to assess your request. The reason provided is "I just feel like I need new headphones." We will notify you once a decision is made. Thank you for your understanding, Adele.
+Adele Goldberg, your request for headphones has been escalated for human review. The reason provided is unclear. A review has been initiated with ID R001. You will be notified once a decision is made. Thank you for your understanding.

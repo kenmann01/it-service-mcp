@@ -7,8 +7,8 @@ REQUEST: Hello, I'm Adele Goldberg (E011). This is my first pair of headphones; 
 [ACTION] evaluate_request({"employee": "Adele Goldberg", "item_requested": "headphones", "reason": "This is my first pair of headphones; I do not have one yet.", "role": "employee"})
 [OBSERVATION] {"decision": "approve", "rule": "headphones_first"}
 [ROUTE] approve (headphones_first) -> draft the approval, naming the rule
-[DRAFT] Your request for headphones has been approved under rule headphones_first. We will ship your new pair of headphones shortly. Thank you, Adele Goldberg!
-[REFLECTION] Draft corrected: Your request for headphones has been approved under rule headphones_first. We will ship your new pair of headphones shortly. Thank you, Adele Goldberg!
+[DRAFT] Your request for headphones has been approved. The decision is based on Rule ID: headphones_first. You are all set to receive your first pair of headphones!
+[REFLECTION] Draft confirmed against tool observations
 
 FINAL RESPONSE:
-Your request for headphones has been approved under rule headphones_first. We will ship your new pair of headphones shortly. Thank you, Adele Goldberg!
+Your request for headphones has been approved. The decision is based on Rule ID: headphones_first. You are all set to receive your first pair of headphones!
