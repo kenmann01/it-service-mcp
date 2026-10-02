@@ -15,22 +15,28 @@ class FakeLLM:
     """Scripted chat(): returns prepared LLMResponse objects in order."""
 
     def __init__(self, script: list[LLMResponse]) -> None:
+        """Store the replies this fake will return, in order."""
         self.script = iter(script)
         self.messages: list[list[dict]] = []
 
     def chat(self, messages, tools=None) -> LLMResponse:
+        """Record the messages and return the next scripted reply."""
         self.messages.append(messages)
         return next(self.script)
 
 
 def _trace_with_observation() -> Trace:
+    """Build a silent trace that already has one policy observation."""
     trace = Trace(echo=False)
     trace.add("observation", '{"decision": "approve", "rule": "headphones_replacement"}')
     return trace
 
 
 class ReflectTests(unittest.TestCase):
+    """CONFIRMED keeps the draft; CORRECTED replaces it; anything else fails open."""
+
     def test_confirmed_keeps_the_draft(self) -> None:
+        """A CONFIRMED reply leaves the original draft in place."""
         llm = FakeLLM([LLMResponse(content="CONFIRMED")])
         trace = _trace_with_observation()
         result = reflect("Your replacement headphones are approved.", trace, llm)
@@ -38,6 +44,7 @@ class ReflectTests(unittest.TestCase):
         self.assertEqual(result.final_draft, "Your replacement headphones are approved.")
 
     def test_prompt_includes_draft_and_observations(self) -> None:
+        """The review prompt contains the draft and the observation text."""
         llm = FakeLLM([LLMResponse(content="CONFIRMED")])
         trace = _trace_with_observation()
         reflect("Draft text.", trace, llm)
@@ -46,6 +53,7 @@ class ReflectTests(unittest.TestCase):
         self.assertIn("headphones_replacement", prompt)
 
     def test_corrected_replaces_the_draft(self) -> None:
+        """A CORRECTED reply becomes the final draft and keeps the original."""
         llm = FakeLLM([LLMResponse(content="CORRECTED: The corrected draft.")])
         result = reflect("The draft.", _trace_with_observation(), llm)
         self.assertFalse(result.confirmed)
@@ -53,11 +61,13 @@ class ReflectTests(unittest.TestCase):
         self.assertEqual(result.original, "The draft.")
 
     def test_empty_correction_keeps_the_original(self) -> None:
+        """A CORRECTED reply with no text keeps the original draft."""
         llm = FakeLLM([LLMResponse(content="CORRECTED:")])
         result = reflect("The draft.", _trace_with_observation(), llm)
         self.assertEqual(result.final_draft, "The draft.")
 
     def test_unparseable_reply_fails_open(self) -> None:
+        """A reply that is neither CONFIRMED nor CORRECTED keeps the draft."""
         llm = FakeLLM([LLMResponse(content="The draft looks fine to me.")])
         result = reflect("The draft.", _trace_with_observation(), llm)
         self.assertTrue(result.confirmed)

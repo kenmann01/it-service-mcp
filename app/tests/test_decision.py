@@ -13,12 +13,16 @@ FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "mock-requests.jso
 
 
 class ClassifyReasonTests(unittest.TestCase):
+    """Reason text maps to the first matching class in the spec."""
+
     def test_each_signal_class(self) -> None:
+        """Second, first, and replacement phrases each map to their class."""
         self.assertEqual(classify_reason("Second pair, I already have one."), "second")
         self.assertEqual(classify_reason("First pair, I do not have headphones."), "first")
         self.assertEqual(classify_reason("Replacement of my broken headphones."), "replacement")
 
     def test_week_overlap_needs_all_three_signals(self) -> None:
+        """Week overlap requires keep-both, a week, and a return together."""
         self.assertEqual(
             classify_reason("Keep both for a week, then return the old one."), "week_overlap"
         )
@@ -26,21 +30,28 @@ class ClassifyReasonTests(unittest.TestCase):
         self.assertEqual(classify_reason("Return it next week."), "unclear")
 
     def test_week_overlap_beats_replacement(self) -> None:
+        """A replacement phrase still classifies as week overlap when all three signals are present."""
         reason = "Replacing my laptop. I will keep both for a week before I return the old one."
         self.assertEqual(classify_reason(reason), "week_overlap")
 
     def test_second_plus_first_is_unclear(self) -> None:
+        """A reason that says both second and first is unclear."""
         self.assertEqual(classify_reason("A second pair since I do not have one."), "unclear")
 
     def test_unrecognized_reason_is_unclear(self) -> None:
+        """Text with no known signal is unclear."""
         self.assertEqual(classify_reason("Protein goals."), "unclear")
 
     def test_matching_ignores_case_and_outer_spaces(self) -> None:
+        """Matching ignores case and spaces around the reason."""
         self.assertEqual(classify_reason("  It BROKE. Need a REPLACEMENT.  "), "replacement")
 
 
 class EvaluateRequestTests(unittest.TestCase):
+    """First-match outcomes for blank, unknown, and covered requests."""
+
     def test_blank_field_escalates(self) -> None:
+        """A blank reason or a blank employee escalates as a blank field."""
         self.assertEqual(
             evaluate_request("Grace Hopper", "employee", "headphones", "  "),
             {"decision": "escalate", "rule": "blank_field"},
@@ -51,6 +62,7 @@ class EvaluateRequestTests(unittest.TestCase):
         )
 
     def test_unknown_role_escalates(self) -> None:
+        """A role outside employee, manager, and director escalates."""
         self.assertEqual(
             evaluate_request("Mani", "FDE", "vanilla latte", "protein goals"),
             {"decision": "escalate", "rule": "unknown_role"},
@@ -61,18 +73,21 @@ class EvaluateRequestTests(unittest.TestCase):
         )
 
     def test_unknown_item_escalates(self) -> None:
+        """An item other than headphones, phone, or laptop escalates."""
         self.assertEqual(
             evaluate_request("Grace Hopper", "employee", "monitor", "replacement"),
             {"decision": "escalate", "rule": "unknown_item"},
         )
 
     def test_employee_laptop_is_denied(self) -> None:
+        """An employee laptop request is denied before other laptop rules."""
         self.assertEqual(
             evaluate_request("Linus Torvalds", "employee", "laptop", "I need it for work."),
             {"decision": "deny", "rule": "employee_laptop"},
         )
 
     def test_manager_laptop_week_overlap_escalates(self) -> None:
+        """A manager laptop kept for a week before return escalates."""
         reason = "Replacing my laptop. I will keep both for a week before returning the old one."
         self.assertEqual(
             evaluate_request("Ada Lovelace", "manager", "laptop", reason),
@@ -80,12 +95,14 @@ class EvaluateRequestTests(unittest.TestCase):
         )
 
     def test_other_manager_laptops_are_denied(self) -> None:
+        """A staff laptop that is not a week overlap is denied."""
         self.assertEqual(
             evaluate_request("Ada Lovelace", "director", "laptop", "broken screen"),
             {"decision": "deny", "rule": "laptop_not_covered"},
         )
 
     def test_headphones_replacement_and_first_are_approved(self) -> None:
+        """A replacement or a first pair of headphones is approved."""
         self.assertEqual(
             evaluate_request("Grace Hopper", "employee", "headphones", "broken"),
             {"decision": "approve", "rule": "headphones_replacement"},
@@ -96,12 +113,14 @@ class EvaluateRequestTests(unittest.TestCase):
         )
 
     def test_headphones_second_is_denied(self) -> None:
+        """A second or spare pair of headphones is denied."""
         self.assertEqual(
             evaluate_request("Margaret Hamilton", "director", "headphones", "spare pair"),
             {"decision": "deny", "rule": "headphones_second"},
         )
 
     def test_employee_phone_rules(self) -> None:
+        """An employee phone is approved, escalated, or denied by reason class."""
         self.assertEqual(
             evaluate_request("Radia Perlman", "employee", "phone", "my phone broke"),
             {"decision": "approve", "rule": "employee_phone_replacement"},
@@ -116,6 +135,7 @@ class EvaluateRequestTests(unittest.TestCase):
         )
 
     def test_manager_and_director_phone_rules(self) -> None:
+        """A manager or director phone follows the staff phone rules."""
         self.assertEqual(
             evaluate_request("Barbara Liskov", "manager", "phone", "replacement, it stopped working"),
             {"decision": "approve", "rule": "manager_phone_replacement"},
@@ -130,6 +150,7 @@ class EvaluateRequestTests(unittest.TestCase):
         )
 
     def test_unclear_and_week_overlap_reasons_escalate(self) -> None:
+        """An unclear reason, including a phone week overlap, escalates."""
         self.assertEqual(
             evaluate_request("Grace Hopper", "employee", "headphones", "not sure what I need"),
             {"decision": "escalate", "rule": "unclear_reason"},
@@ -141,6 +162,7 @@ class EvaluateRequestTests(unittest.TestCase):
         )
 
     def test_normalizes_role_item_and_reason(self) -> None:
+        """Role, item, and reason matching ignore case and surrounding spaces."""
         self.assertEqual(
             evaluate_request(" Grace Hopper ", " Employee ", " Headphones ", " It BROKE. "),
             {"decision": "approve", "rule": "headphones_replacement"},
@@ -148,7 +170,10 @@ class EvaluateRequestTests(unittest.TestCase):
 
 
 class FixtureTests(unittest.TestCase):
+    """The ten fixture requests match the decisions stored beside them."""
+
     def test_all_fixture_cases_match_expected_decision(self) -> None:
+        """Every fixture case returns the decision recorded in the fixture file."""
         with FIXTURES.open(encoding="utf-8") as handle:
             cases = json.load(handle)["cases"]
         self.assertEqual(len(cases), 10)

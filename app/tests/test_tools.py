@@ -8,12 +8,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from tools.eligibility import check_request_eligibility
 from tools.employee_info import get_employee_info
-from tools.human_review import clear_reviews, flag_for_human_review
+from tools.human_review import clear_reviews, flag_for_human_review, pending_reviews
 from tools.policy_limits import get_policy_limits
 
 
 class EmployeeInfoTests(unittest.TestCase):
+    """Lookup of a known employee, a padded id, and an unknown id."""
+
     def test_known_employee(self) -> None:
+        """A known id returns name, role, tenure, and equipment."""
         info = get_employee_info("E001")
         self.assertTrue(info["found"])
         self.assertEqual(info["name"], "Grace Hopper")
@@ -22,18 +25,23 @@ class EmployeeInfoTests(unittest.TestCase):
         self.assertEqual(info["equipment"], ["headphones", "laptop"])
 
     def test_strips_id_whitespace(self) -> None:
+        """Surrounding spaces on an id still find the employee."""
         info = get_employee_info("  E010 ")
         self.assertTrue(info["found"])
         self.assertEqual(info["name"], "Linus Torvalds")
         self.assertEqual(info["role"], "employee")
 
     def test_unknown_employee(self) -> None:
+        """An unknown id returns found=false and the id that was asked for."""
         info = get_employee_info("E999")
         self.assertEqual(info, {"found": False, "employee_id": "E999"})
 
 
 class PolicyLimitTests(unittest.TestCase):
+    """Role coverage periods, including unknown roles."""
+
     def test_each_role(self) -> None:
+        """Every known role may get headphones and a phone, and not a laptop."""
         for role in ("employee", "manager", "director"):
             limits = get_policy_limits(role)
             self.assertTrue(limits["known"])
@@ -42,43 +50,53 @@ class PolicyLimitTests(unittest.TestCase):
             self.assertIn("period", limits["items"]["headphones"])
 
     def test_employee_phone_period_is_replacement_only(self) -> None:
+        """An employee phone is covered for replacement, not on a yearly cadence."""
         limits = get_policy_limits(" Employee ")
         self.assertEqual(limits["role"], "employee")
         self.assertIn("replacement", limits["items"]["phone"]["period"].lower())
         self.assertNotIn("year", limits["items"]["phone"]["period"].lower())
 
     def test_manager_phone_covers_a_first_phone(self) -> None:
+        """A manager phone period names both a first phone and a second phone."""
         period = get_policy_limits("manager")["items"]["phone"]["period"].lower()
         self.assertIn("first", period)
         self.assertIn("second", period)
 
     def test_unknown_role(self) -> None:
+        """An unknown role returns known=false."""
         limits = get_policy_limits("executive")
         self.assertEqual(limits, {"role": "executive", "known": False})
 
 
 class EligibilityTests(unittest.TestCase):
+    """Static role and item coverage, ignoring equipment already on file."""
+
     def test_headphones_are_eligible_for_every_role(self) -> None:
+        """Headphones are eligible for an employee, a manager, and a director."""
         for employee_id in ("E001", "E003", "E004"):
             result = check_request_eligibility(employee_id, " Headphones ")
             self.assertTrue(result["eligible"])
             self.assertEqual(result["item"], "headphones")
 
     def test_phone_is_eligible_for_every_role(self) -> None:
+        """A phone is eligible for an employee, a manager, and a director."""
         for employee_id in ("E005", "E007", "E013"):
             result = check_request_eligibility(employee_id, "phone")
             self.assertTrue(result["eligible"])
 
     def test_laptop_is_never_eligible(self) -> None:
+        """A laptop is not eligible for any role."""
         for employee_id in ("E010", "E009", "E008"):
             result = check_request_eligibility(employee_id, "laptop")
             self.assertFalse(result["eligible"])
 
     def test_unknown_item_and_unknown_employee(self) -> None:
+        """An unknown item or an unknown employee is not eligible."""
         self.assertFalse(check_request_eligibility("E001", "monitor")["eligible"])
         self.assertFalse(check_request_eligibility("E999", "headphones")["eligible"])
 
     def test_does_not_use_equipment_on_file(self) -> None:
+        """Eligibility stays true whether or not headphones are already on file."""
         without_headphones = check_request_eligibility("E011", "headphones")
         with_headphones = check_request_eligibility("E001", "headphones")
         self.assertTrue(without_headphones["eligible"])
@@ -86,10 +104,14 @@ class EligibilityTests(unittest.TestCase):
 
 
 class HumanReviewTests(unittest.TestCase):
+    """The in-process escalation queue assigns ids and keeps the request text."""
+
     def setUp(self) -> None:
+        """Start each test with an empty review queue."""
         clear_reviews()
 
     def test_two_escalations_get_distinct_ids(self) -> None:
+        """Two escalations are both recorded and get different review ids."""
         first = flag_for_human_review("E010", "laptop", "I need a laptop for my work.")
         second = flag_for_human_review("E004", "headphones", "Second pair.")
         self.assertEqual(first["status"], "escalated")
@@ -99,9 +121,18 @@ class HumanReviewTests(unittest.TestCase):
         self.assertEqual(second["request"], "headphones")
 
     def test_blank_fields_are_still_escalated(self) -> None:
+        """Blank fields are still recorded as escalated, unchanged."""
         record = flag_for_human_review("  ", "  ", "  ")
         self.assertEqual(record["status"], "escalated")
         self.assertEqual(record["request"], "  ")
+
+    def test_pending_reviews_lists_then_clear_empties(self) -> None:
+        """pending_reviews returns recorded escalations, and clear_reviews drops them."""
+        first = flag_for_human_review("E010", "laptop", "I need a laptop for my work.")
+        second = flag_for_human_review("E004", "headphones", "Second pair.")
+        self.assertEqual(pending_reviews(), [first, second])
+        clear_reviews()
+        self.assertEqual(pending_reviews(), [])
 
 
 if __name__ == "__main__":
