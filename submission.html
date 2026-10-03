@@ -224,7 +224,7 @@ The decision record is only the effect and the control id:
 {&quot;decision&quot;: &quot;approve&quot;, &quot;rule&quot;: &quot;headphones_replacement&quot;}
 ```
 
-`rule` is the control id from the row that matched. The reply to the requester cites that id. An exception is queued with `flag_for_human_review` and is not treated as an approval.</pre></section><section><h2>2. Minimal one-tool server and client connection</h2><div class="note">Built in order, in the repo's first two commits: the basic server skeleton first (the SDK installs, the server starts), then the four tools as plain functions over self-generated mock data, their unit tests, and the MCP client used to confirm connectivity. All of it existed before the agent.</div><div class="file">app/src/server.py — as first committed (dc17847)</div><pre class="code"><span class="k">from</span> mcp.server <span class="k">import</span> MCPServer
+`rule` is the control id from the row that matched. The reply to the requester cites that id. An exception is queued with `flag_for_human_review` and is not treated as an approval.</pre></section><section><h2>2. Minimal one-tool server and client connection</h2><div class="note">Built in order, in the repo's first two commits: an SDK smoke-test server first (a trivial tool and a resource, no business logic), then the four tools as plain functions over self-generated mock data, their unit tests, and the MCP client used to confirm connectivity. All of it existed before the agent.</div><div class="file">app/src/server.py — as first committed (dc17847)</div><pre class="code"><span class="k">from</span> mcp.server <span class="k">import</span> MCPServer
 
 mcp = MCPServer(<span class="s">"Demo"</span>)
 
@@ -768,7 +768,7 @@ SERVER = Path(__file__).resolve().parent / <span class="s">"minimal_server.py"</
     anyio.run(main)</pre><div class="file">demo/outputs/minimal-server.txt</div><pre class="term">Connecting to minimal_server.py over stdio...
 Registered tools: [&#x27;ping&#x27;]
 Calling ping()...
-ping() -&gt; pong</pre></section><section><h2>3. MCP server code (all five tools)</h2><div class="note">Server and tool sources. Every module, class, and function carries a docstring (294 of 294 by AST count); policy lives in the deterministic evaluate_request register, never in the model.</div><div class="file">app/src/server.py</div><pre class="code"><span class="s">""</span><span class="s">"MCP server for the Internal IT Service: registers the five request tools."</span><span class="s">""</span>
+ping() -&gt; pong</pre></section><section><h2>3. MCP server code (all five tools)</h2><div class="note">Server and tool sources. Every module, class, and function carries a docstring (298 of 298 by AST count); policy lives in the deterministic evaluate_request register, never in the model.</div><div class="file">app/src/server.py</div><pre class="code"><span class="s">""</span><span class="s">"MCP server for the Internal IT Service: registers the five request tools."</span><span class="s">""</span>
 
 <span class="k">from</span> mcp.server <span class="k">import</span> MCPServer
 <span class="k">from</span> mcp_types <span class="k">import</span> ToolAnnotations
@@ -2365,6 +2365,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / <span class="s">"sr
         result = reflect(<span class="s">"The draft."</span>, _trace_with_observation(), llm)
         <span class="k">self</span>.assertEqual(result.final_draft, <span class="s">"The draft."</span>)
 
+    <span class="k">def</span> test_placeholder_echo_keeps_the_original(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="s">""</span><span class="s">"A CORRECTED reply that echoes the prompt placeholder keeps the draft."</span><span class="s">""</span>
+        llm = FakeLLM([LLMResponse(content=<span class="s">"CORRECTED: &lt;the revised draft&gt;"</span>)])
+        result = reflect(<span class="s">"Denied under employee_phone_second."</span>, _trace_with_observation(), llm)
+        <span class="k">self</span>.assertEqual(result.final_draft, <span class="s">"Denied under employee_phone_second."</span>)
+        <span class="k">self</span>.assertNotIn(<span class="s">"&lt;"</span>, result.final_draft)
+
     <span class="k">def</span> test_unparseable_reply_fails_open(<span class="k">self</span>) -&gt; <span class="k">None</span>:
         <span class="s">""</span><span class="s">"A reply that is neither CONFIRMED nor CORRECTED keeps the draft."</span><span class="s">""</span>
         llm = FakeLLM([LLMResponse(content=<span class="s">"The draft looks fine to me."</span>)])
@@ -2398,6 +2405,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / <span class="s">"sr
         <span class="k">self</span>.assertIn(<span class="s">"headphones"</span>, result.final_draft)
         <span class="k">self</span>.assertFalse(result.confirmed)
 
+    <span class="k">def</span> test_retry_placeholder_echo_falls_back_to_the_strip(<span class="k">self</span>) -&gt; <span class="k">None</span>:
+        <span class="s">""</span><span class="s">"A retry that echoes the placeholder cannot become the final letter."</span><span class="s">""</span>
+        invented = <span class="s">"Denied under employee_phone_second; you asked for 2 phones."</span>
+        llm = FakeLLM(
+            [
+                LLMResponse(content=f<span class="s">"CORRECTED: {invented}"</span>),
+                LLMResponse(content=<span class="s">"CORRECTED: &lt;the revised draft&gt;"</span>),
+            ]
+        )
+        result = reflect(
+            invented,
+            _trace_with_observation(),
+            llm,
+            request=<span class="s">"Hi, I'm Radia Perlman (E005). I want a second phone."</span>,
+        )
+        <span class="k">self</span>.assertNotIn(<span class="s">"&lt;"</span>, result.final_draft)
+        <span class="k">self</span>.assertNotIn(<span class="s">"2"</span>, result.final_draft)
+        <span class="k">self</span>.assertFalse(result.confirmed)
+
     <span class="k">def</span> test_a_count_written_in_the_request_is_kept(<span class="k">self</span>) -&gt; <span class="k">None</span>:
         <span class="s">""</span><span class="s">"A number the requester actually wrote survives the review."</span><span class="s">""</span>
         llm = FakeLLM([LLMResponse(content=<span class="s">"CONFIRMED"</span>)])
@@ -2408,9 +2434,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / <span class="s">"sr
 
 
 <span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
-    unittest.main()</pre><div class="file">demo/outputs/pytest.txt</div><pre class="term">.................................................... [ 59%]
-...................................                                      [100%]
-87 passed, 20 subtests passed in 4.66s</pre></section><section><h2>5. Agent code, including the MCP client connection</h2><div class="file">app/src/agent/react.py</div><pre class="code"><span class="s">""</span>"Planner -&gt; TAO -&gt; Reflector, the whiteboard pipeline.
+    unittest.main()</pre><div class="file">demo/outputs/pytest.txt</div><pre class="term">.................................................... [ 58%]
+.....................................                                    [100%]
+89 passed, 20 subtests passed in 4.67s</pre></section><section><h2>5. Agent code, including the MCP client connection</h2><div class="file">app/src/agent/react.py</div><pre class="code"><span class="s">""</span>"Planner -&gt; TAO -&gt; Reflector, the whiteboard pipeline.
 
 Planner: the system prompt below; the model states its plan before acting.
 TAO: the Thought/Action/Observation loop over the MCP server's tools.
@@ -3248,6 +3274,12 @@ If the draft needs fixing, reply exactly: CORRECTED: &lt;the revised draft&gt;
     <span class="k">return</span> cleaned.strip()
 
 
+<span class="k">def</span> _usable_revision(revision: str) -&gt; bool:
+    <span class="s">""</span><span class="s">"True when a revision is real prose, not the prompt placeholder echoed."</span><span class="s">""</span>
+    stripped = revision.strip()
+    <span class="k">return</span> bool(stripped) <span class="k">and</span> <span class="k">not</span> re.search(r<span class="s">"&lt;[^&gt;]+&gt;"</span>, stripped)
+
+
 <span class="k">def</span> reflect(draft: str, trace: Trace, llm: Any, request: str = <span class="s">""</span>) -&gt; ReflectionResult:
     <span class="s">""</span><span class="s">"Review the draft against the request and the trace; drop unstated counts."</span><span class="s">""</span>
     observations = trace.observations() <span class="k">or</span> <span class="s">"(none)"</span>
@@ -3260,9 +3292,15 @@ If the draft needs fixing, reply exactly: CORRECTED: &lt;the revised draft&gt;
     text = (response.content <span class="k">or</span> <span class="s">""</span>).strip()
 
     <span class="k">if</span> text.startswith(<span class="s">"CORRECTED:"</span>):
-        final = text.removeprefix(<span class="s">"CORRECTED:"</span>).strip() <span class="k">or</span> draft
-        confirmed = <span class="k">False</span>
-        summary = f<span class="s">"Draft corrected: {final}"</span>
+        revision = text.removeprefix(<span class="s">"CORRECTED:"</span>).strip()
+        <span class="k">if</span> _usable_revision(revision):
+            final = revision
+            confirmed = <span class="k">False</span>
+            summary = f<span class="s">"Draft corrected: {final}"</span>
+        <span class="k">else</span>:
+            final = draft
+            confirmed = <span class="k">True</span>
+            summary = <span class="s">"Reflection revision was not usable; draft kept"</span>
     <span class="k">elif</span> text.startswith(<span class="s">"CONFIRMED"</span>):
         final = draft
         confirmed = <span class="k">True</span>
@@ -3289,7 +3327,9 @@ If the draft needs fixing, reply exactly: CORRECTED: &lt;the revised draft&gt;
         )
         retry_text = (retry.content <span class="k">or</span> <span class="s">""</span>).strip()
         <span class="k">if</span> retry_text.startswith(<span class="s">"CORRECTED:"</span>):
-            final = retry_text.removeprefix(<span class="s">"CORRECTED:"</span>).strip() <span class="k">or</span> final
+            revision = retry_text.removeprefix(<span class="s">"CORRECTED:"</span>).strip()
+            <span class="k">if</span> _usable_revision(revision):
+                final = revision
         still = unsupported_numbers(final, request, observations)
         <span class="k">if</span> still:
             final = _strip_numbers(final, still)
@@ -3503,9 +3543,10 @@ Your request for a second phone has been escalated for human review. The reason 
 === decision=approve rule=headphones_replacement ===</pre><div class="note"><b>deny request</b></div><pre class="term">The request is denied under the rule &quot;employee_laptop&quot; because laptops are not issued to employees.
 === decision=deny rule=employee_laptop ===</pre><div class="note"><b>week-overlap request</b></div><pre class="term">Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.
 === decision=escalate rule=laptop_week_overlap review_id=R001 ===</pre><div class="note"><b>unclear request</b></div><pre class="term">Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review has been initiated with ID R001. You will be notified once the review is complete.
-=== decision=escalate rule=unclear_reason review_id=R001 ===</pre></section><section><h2>8. Evidence of the reflection step</h2><div class="note"><b>approve request</b> &mdash; The Reflector confirmed the draft against the tool observations:</div><pre class="term">[DRAFT]Your request for a replacement headphones is approved under the rule &quot;headphones_replacement&quot;. The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.
-[REFLECTION] Draft corrected: Your request for replacement headphones is approved under the rule &quot;headphones_replacement&quot;. The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.</pre><div class="note"><b>week-overlap request</b> &mdash; Draft omitted the escalation reason; the Reflector added it:</div><pre class="term">[DRAFT]Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.
-[REFLECTION] Draft corrected: Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.</pre></section><section><h2>9. Passing pipeline run</h2><div class="file">demo/outputs/ci-run.txt</div><pre class="term">
+=== decision=escalate rule=unclear_reason review_id=R001 ===</pre></section><section><h2>8. Evidence of the reflection step</h2><div class="note"><b>approve request</b> (demo/outputs/demo-approve.txt): the Reflector revised the draft.</div><pre class="term">[DRAFT] Your request for a replacement headphones is approved under the rule &quot;headphones_replacement&quot;. The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.
+[REFLECTION] Your request for replacement headphones is approved under the rule &quot;headphones_replacement&quot;. The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.</pre><div class="note"><b>pool case escalate-1-01-unknown-role</b> (demo/traces/escalate-1-01-unknown-role.txt): the Reflector revised the draft.</div><pre class="term">[DRAFT] The request has been escalated for human review. The review ID is R001. Please wait for further instructions.
+[REFLECTION] The request has been escalated for human review. The review ID is R001. The reason for escalation is: &quot;Hi, I&#x27;m Mani. I&#x27;d like a vanilla latte, protein goals.&quot; Please wait for further instructions.</pre><div class="note"><b>week-overlap request</b> (demo/outputs/demo-escalate-week-overlap.txt): the Reflector reviewed the draft and returned it word for word.</div><pre class="term">[DRAFT] Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.
+[REFLECTION] Your request to replace your laptop and keep both for a week has been escalated for human review. The policy requires returning the old laptop before requesting a new one. Review ID: R001. Please wait for further instructions.</pre></section><section><h2>9. Passing pipeline run</h2><div class="file">demo/outputs/ci-run.txt</div><pre class="term">
 ✓ master ci · 37073595667
 Triggered via push less than a minute ago
 
@@ -3525,29 +3566,29 @@ View this run on GitHub: https://github.com/kenmann01/it-service-mcp/actions/run
 ========================================================================
 id                                           expected  got       rule                         status     sec
 ------------------------------------------------------------------------------------------------------------
-approve-01-headphones-replacement            approve   approve   headphones_replacement       OK           5
-approve-02-headphones-first                  approve   approve   headphones_first             OK           3
+approve-01-headphones-replacement            approve   approve   headphones_replacement       OK           8
+approve-02-headphones-first                  approve   approve   headphones_first             OK           5
 approve-03-employee-phone-replacement        approve   approve   employee_phone_replacement   OK           5
-approve-04-manager-headphones-replacement    approve   approve   headphones_replacement       OK           4
-approve-05-manager-phone-first               approve   approve   manager_phone_first          OK           4
+approve-04-manager-headphones-replacement    approve   approve   headphones_replacement       OK           5
+approve-05-manager-phone-first               approve   approve   manager_phone_first          OK           5
 approve-06-director-phone-replacement        approve   approve   manager_phone_replacement    OK           5
-deny-01-employee-laptop                      deny      deny      employee_laptop              OK           3
-deny-02-employee-phone-second                deny      deny      employee_phone_second        OK           4
+deny-01-employee-laptop                      deny      deny      employee_laptop              OK           4
+deny-02-employee-phone-second                deny      deny      employee_phone_second        OK           3
 deny-03-headphones-spare                     deny      deny      headphones_second            OK           4
 deny-04-director-phone-second                deny      deny      manager_phone_second         OK           4
-deny-05-manager-laptop                       deny      deny      laptop_not_covered           OK           4
+deny-05-manager-laptop                       deny      deny      laptop_not_covered           OK           5
 deny-06-headphones-extra                     deny      deny      headphones_second            OK           4
 escalate-1-01-unknown-role                   escalate  escalate  subject_unresolved           OK           3
 escalate-1-02-blank-reason                   escalate  escalate  unclear_reason               OK           5
-escalate-1-03-unclear-contradiction          escalate  escalate  unclear_reason               OK           5
+escalate-1-03-unclear-contradiction          escalate  escalate  unclear_reason               OK           6
 escalate-1-04-employee-phone-first           escalate  escalate  employee_phone_first         OK           6
 escalate-1-05-unknown-item                   escalate  escalate  unknown_item                 OK           7
 escalate-1-06-no-signal                      escalate  escalate  unclear_reason               OK           6
 escalate-2-01-manager-laptop-week-overlap    escalate  escalate  laptop_week_overlap          OK           6
-escalate-2-02-manager-laptop-7-days          escalate  escalate  laptop_week_overlap          OK           6
+escalate-2-02-manager-laptop-7-days          escalate  escalate  laptop_week_overlap          OK           5
 escalate-2-03-director-laptop-week-overlap   escalate  escalate  laptop_week_overlap          OK           6
 escalate-2-04-manager-phone-week-overlap     escalate  escalate  unclear_reason               OK           6
-escalate-2-05-headphones-week-overlap        escalate  escalate  unclear_reason               OK           7
+escalate-2-05-headphones-week-overlap        escalate  escalate  unclear_reason               OK           6
 escalate-2-06-director-laptop-handback       escalate  escalate  laptop_week_overlap          OK           6
 ------------------------------------------------------------------------------------------------------------
 matched expectations: 24/24

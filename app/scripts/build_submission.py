@@ -134,17 +134,47 @@ def final_response_block(key: str) -> str:
     return term_block(tail)
 
 
+def _draft_and_reflection(rel: str) -> tuple[str, str, str] | None:
+    """Return the draft, the reflected text, and what happened, from one trace."""
+    text = read(rel)
+    if "[DRAFT]" not in text:
+        return None
+    segment = text.split("[DRAFT]", 1)[1]
+    for marker in ("=== FINAL RESPONSE ===", "FINAL RESPONSE:"):
+        segment = segment.split(marker, 1)[0]
+    lines = [line.strip() for line in segment.splitlines() if line.strip()]
+    draft = lines[0]
+    reflection = next((line for line in lines if line.startswith("[REFLECTION]")), "")
+    if "Draft confirmed" in reflection:
+        return draft, draft, "confirmed"
+    if reflection.startswith("[REFLECTION] Draft corrected:"):
+        reflected = reflection.removeprefix("[REFLECTION] Draft corrected:").strip()
+        return draft, reflected, "revised" if reflected != draft else "reviewed"
+    return draft, draft, "reviewed"
+
+
 def reflection_evidence_block() -> str:
-    """Show drafts the reflector rewrote, with the corrected text."""
+    """Show what the reflector did to each draft, derived from the traces."""
     parts = []
-    for key, note in (
-        ("approve", "The Reflector confirmed the draft against the tool observations:"),
-        ("week-overlap", "Draft omitted the escalation reason; the Reflector added it:"),
+    for label, rel in (
+        ("approve request", DEMO_FILE["approve"]),
+        ("pool case escalate-1-01-unknown-role", "demo/traces/escalate-1-01-unknown-role.txt"),
+        ("week-overlap request", DEMO_FILE["week-overlap"]),
     ):
-        text = read(DEMO_FILE[key])
-        segment = text.split("[DRAFT]", 1)[1].split("=== FINAL RESPONSE ===", 1)[0].strip()
-        parts.append(f'<div class="note"><b>{html.escape(key)} request</b> &mdash; {note}</div>')
-        parts.append(term_block("[DRAFT]" + segment))
+        found = _draft_and_reflection(rel)
+        if found is None:
+            continue
+        draft, reflected, kind = found
+        if kind == "revised":
+            note = "the Reflector revised the draft"
+        elif kind == "confirmed":
+            note = "the Reflector confirmed the draft against the tool observations"
+        else:
+            note = "the Reflector reviewed the draft and returned it word for word"
+        parts.append(
+            f'<div class="note"><b>{html.escape(label)}</b> ({html.escape(rel)}): {note}.</div>'
+        )
+        parts.append(term_block(f"[DRAFT] {draft}\n[REFLECTION] {reflected}"))
     return "".join(parts)
 
 
@@ -205,7 +235,7 @@ def build_html() -> str:
 
     # 2 minimal server + client
     body2 = (
-        '<div class="note">Built in order, in the repo\'s first two commits: the basic server skeleton first (the SDK installs, the server starts), then the four tools as plain functions over self-generated mock data, their unit tests, and the MCP client used to confirm connectivity. All of it existed before the agent.</div>'
+        '<div class="note">Built in order, in the repo\'s first two commits: an SDK smoke-test server first (a trivial tool and a resource, no business logic), then the four tools as plain functions over self-generated mock data, their unit tests, and the MCP client used to confirm connectivity. All of it existed before the agent.</div>'
         + committed("app/src/server.py", COMMIT_SETUP)
         + committed("app/src/tools/data_store.py", COMMIT_TOOLS)
         + committed("app/data/employees.json", COMMIT_TOOLS)
