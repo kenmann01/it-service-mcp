@@ -14,10 +14,10 @@ REQUEST: Hi, I'm Alan Turing (E003). I'd like a replacement for my headphones bu
 [OBSERVATION] {"decision": "escalate", "rule": "unclear_reason"}
 [ROUTE] escalate (unclear_reason) -> call flag_for_human_review, then draft the handoff with the review id
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E003", "reason": "unclear_reason", "request": "replacement headphones, keep both pairs for a week, return old pair"})
-[OBSERVATION] {"employee_id": "E003", "reason": "unclear_reason", "request": "replacement headphones, keep both pairs for a week, return old pair", "review_id": "R001", "status": "escalated"}
-[DRAFT] Your request for replacement headphones, keeping both pairs for a week, and returning the old pair has been escalated for human review. The reason for escalation is unclear. A review ID (R001) has been assigned for tracking purposes. You will be notified once the review is complete.
-[REFLECTION] Draft corrected: Your request for replacement headphones, keeping both pairs for a week, and returning the old pair has been escalated for human review. The reason for escalation is unclear. A review ID (R001) has been assigned for tracking purposes. You will be notified once the review is complete.
+[ACTION] flag_for_human_review({"employee_id": "E003", "reason": "Unclear reason for requesting a replacement pair of headphones while keeping both pairs for a week. The request needs clarification.", "request": "Replacement headphones, keeping both pairs for a week, then returning the old pair"})
+[OBSERVATION] {"employee_id": "E003", "reason": "Unclear reason for requesting a replacement pair of headphones while keeping both pairs for a week. The request needs clarification.", "request": "Replacement headphones, keeping both pairs for a week, then returning the old pair", "review_id": "R001", "status": "escalated"}
+[DRAFT] The request from Alan Turing (E003) for a replacement pair of headphones while keeping both pairs for a week has been escalated for human review. The reason provided is unclear, and the request needs further clarification. The review ID is R001.
+[REFLECTION] Draft corrected: Your request for a replacement pair of headphones while keeping both pairs for a week has been escalated for human review. The reason for requesting a replacement while keeping both pairs is unclear, and further clarification is needed. Review ID: R001.
 
 FINAL RESPONSE:
-Your request for replacement headphones, keeping both pairs for a week, and returning the old pair has been escalated for human review. The reason for escalation is unclear. A review ID (R001) has been assigned for tracking purposes. You will be notified once the review is complete.
+Your request for a replacement pair of headphones while keeping both pairs for a week has been escalated for human review. The reason for requesting a replacement while keeping both pairs is unclear, and further clarification is needed. Review ID: R001.

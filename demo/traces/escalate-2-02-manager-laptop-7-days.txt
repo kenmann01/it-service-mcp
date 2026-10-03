@@ -14,10 +14,10 @@ REQUEST: Hello, I'm Edsger Dijkstra (E012). New laptop please; I'll keep both la
 [OBSERVATION] {"decision": "escalate", "rule": "laptop_week_overlap"}
 [ROUTE] escalate (laptop_week_overlap) -> call flag_for_human_review, then draft the handoff with the review id
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E012", "reason": "Laptop request overlaps with holding both laptops for a week, which is an exception.", "request": "New laptop request; keeping both laptops for 7 days then returning the old one."})
-[OBSERVATION] {"employee_id": "E012", "reason": "Laptop request overlaps with holding both laptops for a week, which is an exception.", "request": "New laptop request; keeping both laptops for 7 days then returning the old one.", "review_id": "R001", "status": "escalated"}
-[DRAFT] Your request has been escalated for human review. The rule applied is "laptop_week_overlap." You will need to provide further clarification or wait for a decision from the review team. Thank you for your patience.
-[REFLECTION] Draft corrected: Your request has been escalated for human review. The rule applied is "laptop_week_overlap." You will need to provide further clarification or wait for a decision from the review team. Thank you for your patience. Your request involves holding both laptops for a week, which is an exception, and therefore requires review (Review ID: R001).
+[ACTION] flag_for_human_review({"employee_id": "E012", "reason": "Request for a laptop with an exception policy requiring holding both laptops for 7 days and returning the old one.", "request": "New laptop please; I'll keep both laptops for 7 days, then return the old one."})
+[OBSERVATION] {"employee_id": "E012", "reason": "Request for a laptop with an exception policy requiring holding both laptops for 7 days and returning the old one.", "request": "New laptop please; I'll keep both laptops for 7 days, then return the old one.", "review_id": "R001", "status": "escalated"}
+[DRAFT] Your request for a new laptop has been escalated for human review. The policy indicates that holding both laptops for 7 days and returning the old one is an exception. Review ID: R001.
+[REFLECTION] Draft corrected: Your request for a new laptop has been escalated for human review. According to the policy, holding both laptops for 7 days and returning the old one is an exception. Review ID: R001.
 
 FINAL RESPONSE:
-Your request has been escalated for human review. The rule applied is "laptop_week_overlap." You will need to provide further clarification or wait for a decision from the review team. Thank you for your patience. Your request involves holding both laptops for a week, which is an exception, and therefore requires review (Review ID: R001).
+Your request for a new laptop has been escalated for human review. According to the policy, holding both laptops for 7 days and returning the old one is an exception. Review ID: R001.

@@ -18,8 +18,8 @@ REQUEST: Hi, I'm Grace Hopper (E001). My monitor arm snapped; can I get a new mo
 [THOUGHT] (iteration 7) I need to call flag_for_human_review.
 [ACTION] flag_for_human_review({"employee_id": "E001", "reason": "The item is not covered under the policy limits.", "request": "request for a monitor arm"})
 [OBSERVATION] {"employee_id": "E001", "reason": "The item is not covered under the policy limits.", "request": "request for a monitor arm", "review_id": "R001", "status": "escalated"}
-[DRAFT] The request for a monitor arm has been escalated for human review. The item is not covered under the policy limits. A review ID (R001) has been assigned for further action. The request will not be approved until a decision is made. Please follow up with the review process for resolution.
-[REFLECTION] Draft corrected: The request for a monitor arm has been escalated for human review. The item is not covered under the policy limits. A review ID (R001) has been assigned for further action. The request will not be approved until a decision is made. Please follow up with the review process for resolution.
+[DRAFT] The request for a monitor arm has been escalated for human review. The item is not covered under the policy limits. A review ID (R001) has been assigned for further action. Please consult the review ID for updates.
+[REFLECTION] Draft corrected: The request for a monitor arm has been escalated for human review. The item is not covered under the policy limits. A review ID (R001) has been assigned for further action. Please consult the review ID for updates.
 
 FINAL RESPONSE:
-The request for a monitor arm has been escalated for human review. The item is not covered under the policy limits. A review ID (R001) has been assigned for further action. The request will not be approved until a decision is made. Please follow up with the review process for resolution.
+The request for a monitor arm has been escalated for human review. The item is not covered under the policy limits. A review ID (R001) has been assigned for further action. Please consult the review ID for updates.

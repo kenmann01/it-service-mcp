@@ -13,8 +13,8 @@ REQUEST: Hi, I'm Radia Perlman (E005). My company phone stopped working after th
 [ACTION] evaluate_request({"employee": "E005", "item_requested": "phone", "reason": "Hi, I'm Radia Perlman (E005). My company phone stopped working after the drop. Can I get a replacement?", "role": "employee"})
 [OBSERVATION] {"decision": "approve", "rule": "employee_phone_replacement"}
 [ROUTE] approve (employee_phone_replacement) -> draft the approval, naming the rule
-[DRAFT] Your request for a replacement phone is approved under the rule "employee_phone_replacement." The policy covers a replacement phone, and you are eligible for this request. Your current phone is already on file, and a replacement is covered. No further action is required.
-[REFLECTION] Draft corrected: Your request for a replacement phone is approved under the rule "employee_phone_replacement." The policy covers a replacement phone, and you are eligible for this request. Your current phone is already on file, and a replacement is covered. No further action is required.
+[DRAFT] Your request for a replacement phone is approved under the rule "employee_phone_replacement." The policy covers a replacement phone, and you are eligible for this item. Your current phone is already on file, and a replacement is allowed. No further action is required.
+[REFLECTION] Draft confirmed against tool observations
 
 FINAL RESPONSE:
-Your request for a replacement phone is approved under the rule "employee_phone_replacement." The policy covers a replacement phone, and you are eligible for this request. Your current phone is already on file, and a replacement is covered. No further action is required.
+Your request for a replacement phone is approved under the rule "employee_phone_replacement." The policy covers a replacement phone, and you are eligible for this item. Your current phone is already on file, and a replacement is allowed. No further action is required.

@@ -5,7 +5,7 @@ REQUEST: Hi, I'm Mani. I'd like a vanilla latte, protein goals.
 [ACTION] flag_for_human_review({"employee_id": "unknown", "reason": "Hi, I'm Mani. I'd like a vanilla latte, protein goals.", "request": "Hi, I'm Mani. I'd like a vanilla latte, protein goals."})
 [OBSERVATION] {"employee_id": "unknown", "reason": "Hi, I'm Mani. I'd like a vanilla latte, protein goals.", "request": "Hi, I'm Mani. I'd like a vanilla latte, protein goals.", "review_id": "R001", "status": "escalated"}
 [DRAFT] The request has been escalated for human review. The review ID is R001. Please wait for further instructions.
-[REFLECTION] Draft corrected: The request has been escalated for human review. The review ID is R001. The reason for escalation is: Hi, I'm Mani. I'd like a vanilla latte, protein goals. Please wait for further instructions.
+[REFLECTION] Draft corrected: The request has been escalated for human review. The review ID is R001. The reason for escalation is: "Hi, I'm Mani. I'd like a vanilla latte, protein goals." Please wait for further instructions.
 
 FINAL RESPONSE:
-The request has been escalated for human review. The review ID is R001. The reason for escalation is: Hi, I'm Mani. I'd like a vanilla latte, protein goals. Please wait for further instructions.
+The request has been escalated for human review. The review ID is R001. The reason for escalation is: "Hi, I'm Mani. I'd like a vanilla latte, protein goals." Please wait for further instructions.

@@ -16,8 +16,8 @@ REQUEST: Hello, I'm Tim Berners-Lee (E006). I don't have a company phone yet; co
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
 [ACTION] flag_for_human_review({"employee_id": "E006", "reason": "escalate due to policy exception for a first phone", "request": "request for a company phone"})
 [OBSERVATION] {"employee_id": "E006", "reason": "escalate due to policy exception for a first phone", "request": "request for a company phone", "review_id": "R001", "status": "escalated"}
-[DRAFT] Your request for a company phone has been escalated for human review. The review ID is R001, and the reason is "escalate due to policy exception for a first phone." A decision will be made after a person reviews this request.
-[REFLECTION] Draft corrected: Your request for a company phone has been escalated for human review. The review ID is R001, and the reason is "escalate due to policy exception for a first phone." A decision will be made after a person reviews this request.
+[DRAFT] Your request for a company phone has been escalated for human review. The review ID is R001, and the reason is "escalate due to policy exception for a first phone." A decision will be made after a person reviews this case.
+[REFLECTION] Draft corrected: Your request for a company phone has been escalated for human review. The review ID is R001, and the reason is "escalate due to policy exception for a first phone." A decision will be made after a person reviews this case.
 
 FINAL RESPONSE:
-Your request for a company phone has been escalated for human review. The review ID is R001, and the reason is "escalate due to policy exception for a first phone." A decision will be made after a person reviews this request.
+Your request for a company phone has been escalated for human review. The review ID is R001, and the reason is "escalate due to policy exception for a first phone." A decision will be made after a person reviews this case.

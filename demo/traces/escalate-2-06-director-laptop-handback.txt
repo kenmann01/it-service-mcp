@@ -14,10 +14,10 @@ REQUEST: Hello, I'm Donald Knuth (E008). I need a laptop refresh; I'll keep both
 [OBSERVATION] {"decision": "escalate", "rule": "laptop_week_overlap"}
 [ROUTE] escalate (laptop_week_overlap) -> call flag_for_human_review, then draft the handoff with the review id
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E008", "reason": "Request for laptop refresh with overlap period", "request": "Laptop refresh request with overlap period"})
-[OBSERVATION] {"employee_id": "E008", "reason": "Request for laptop refresh with overlap period", "request": "Laptop refresh request with overlap period", "review_id": "R001", "status": "escalated"}
-[DRAFT] Your request for a laptop refresh has been escalated for human review. The reason is "Request for laptop refresh with overlap period." A review ID (R001) has been assigned for tracking. You will need to follow up with the IT team for further instructions.
-[REFLECTION] Draft corrected: Hello Donald Knuth (E008), your request for a laptop refresh has been escalated for human review. The reason is "Request for laptop refresh with overlap period." A review ID (R001) has been assigned for tracking. You will need to follow up with the IT team for further instructions.
+[ACTION] flag_for_human_review({"employee_id": "E008", "reason": "Request for laptop refresh with overlap period", "request": "Donald Knuth (E008) needs a laptop refresh; he will keep both laptops for a week and then return the old one to IT."})
+[OBSERVATION] {"employee_id": "E008", "reason": "Request for laptop refresh with overlap period", "request": "Donald Knuth (E008) needs a laptop refresh; he will keep both laptops for a week and then return the old one to IT.", "review_id": "R001", "status": "escalated"}
+[DRAFT] The request from Donald Knuth (E008) has been escalated for human review. The rule applied is "laptop_week_overlap." IT will review the request and make a final decision.
+[REFLECTION] Draft corrected: Hello, Donald Knuth (E008). Your request for a laptop refresh has been escalated for human review due to the "laptop_week_overlap" rule. The review ID is R001, and the reason is: "Request for laptop refresh with overlap period." IT will review the request and make a final decision.
 
 FINAL RESPONSE:
-Hello Donald Knuth (E008), your request for a laptop refresh has been escalated for human review. The reason is "Request for laptop refresh with overlap period." A review ID (R001) has been assigned for tracking. You will need to follow up with the IT team for further instructions.
+Hello, Donald Knuth (E008). Your request for a laptop refresh has been escalated for human review due to the "laptop_week_overlap" rule. The review ID is R001, and the reason is: "Request for laptop refresh with overlap period." IT will review the request and make a final decision.

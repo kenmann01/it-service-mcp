@@ -13,8 +13,8 @@ REQUEST: Hi, I'm Margaret Hamilton (E004). I want a second pair of headphones as
 [ACTION] evaluate_request({"employee": "E004", "item_requested": "headphones", "reason": "Hi, I'm Margaret Hamilton (E004). I want a second pair of headphones as a spare while I keep my current ones.", "role": "director"})
 [OBSERVATION] {"decision": "deny", "rule": "headphones_second"}
 [ROUTE] deny (headphones_second) -> draft the refusal, naming the rule; do not call flag_for_human_review
-[DRAFT] The request is denied under the rule "headphones_second" because a second or spare pair of headphones is not covered by the policy. You may need to seek an exception or alternative solution.
-[REFLECTION] Draft corrected: The request is denied under the rule "headphones_second" because a second or spare pair of headphones is not covered by the policy. You may need to seek an exception or alternative solution.
+[DRAFT] The request is denied under the rule "headphones_second" because a second or spare pair of headphones is not covered by the policy. You may need to seek an exception or provide additional justification for this request.
+[REFLECTION] Reflection revision was not usable; draft kept
 
 FINAL RESPONSE:
-The request is denied under the rule "headphones_second" because a second or spare pair of headphones is not covered by the policy. You may need to seek an exception or alternative solution.
+The request is denied under the rule "headphones_second" because a second or spare pair of headphones is not covered by the policy. You may need to seek an exception or provide additional justification for this request.

@@ -16,8 +16,8 @@ REQUEST: Hi, I'm Katherine Johnson (E002). I'd like to request headphones.
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
 [ACTION] flag_for_human_review({"employee_id": "E002", "reason": "unclear_reason", "request": "request headphones"})
 [OBSERVATION] {"employee_id": "E002", "reason": "unclear_reason", "request": "request headphones", "review_id": "R001", "status": "escalated"}
-[DRAFT] Katherine Johnson (E002) requested headphones. The request was escalated for human review with the rule "unclear_reason" and review ID R001. The decision will be made by a person after reviewing the request.
-[REFLECTION] Draft corrected: Katherine Johnson (E002) requested headphones. The request has been escalated for human review due to an unclear reason. Review ID R001 has been assigned for further evaluation.
+[DRAFT] Katherine Johnson (E002) requested headphones. The request was escalated for human review with the rule "unclear_reason" and review ID R001. The decision awaits further evaluation by a person.
+[REFLECTION] Draft corrected: Katherine Johnson (E002) requested headphones. The request has been escalated for human review due to an unclear reason. Review ID R001. The decision is pending further evaluation by a person.
 
 FINAL RESPONSE:
-Katherine Johnson (E002) requested headphones. The request has been escalated for human review due to an unclear reason. Review ID R001 has been assigned for further evaluation.
+Katherine Johnson (E002) requested headphones. The request has been escalated for human review due to an unclear reason. Review ID R001. The decision is pending further evaluation by a person.

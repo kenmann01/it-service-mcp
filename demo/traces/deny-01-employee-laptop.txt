@@ -13,8 +13,8 @@ REQUEST: Hi, I'm Linus Torvalds (E010). I need a laptop for my work.
 [ACTION] evaluate_request({"employee": "Linus Torvalds", "item_requested": "laptop", "reason": "Hi, I'm Linus Torvalds (E010). I need a laptop for my work.", "role": "employee"})
 [OBSERVATION] {"decision": "deny", "rule": "employee_laptop"}
 [ROUTE] deny (employee_laptop) -> draft the refusal, naming the rule; do not call flag_for_human_review
-[DRAFT] The request is denied under the rule "employee_laptop" because laptops are not issued to employees.
-[REFLECTION] Draft corrected: The request is denied under the rule "employee_laptop" because laptops are not issued to employees.
+[DRAFT] The request is denied under the rule "employee_laptop" because laptops are not issued to employees. You may need to explore alternative solutions or contact your supervisor for further assistance.
+[REFLECTION] Draft corrected: The request is denied under the rule "employee_laptop" because laptops are not issued to employees. You may need to explore alternative solutions or contact your supervisor for further assistance.
 
 FINAL RESPONSE:
-The request is denied under the rule "employee_laptop" because laptops are not issued to employees.
+The request is denied under the rule "employee_laptop" because laptops are not issued to employees. You may need to explore alternative solutions or contact your supervisor for further assistance.

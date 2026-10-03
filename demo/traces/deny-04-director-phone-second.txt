@@ -10,11 +10,11 @@ REQUEST: Hello, I'm Donald Knuth (E008). I'd like another phone; I already have 
 [ACTION] check_request_eligibility({"employee_id": "E008", "item": "phone"})
 [OBSERVATION] {"eligible": true, "employee_id": "E008", "item": "phone"}
 [THOUGHT] (iteration 4) I need to call evaluate_request.
-[ACTION] evaluate_request({"employee": "E008", "item_requested": "phone", "reason": "Hello, I'm Donald Knuth (E008). I'd like another phone; I already have one.", "role": "director"})
+[ACTION] evaluate_request({"employee": "Donald Knuth", "item_requested": "phone", "reason": "Hello, I'm Donald Knuth (E008). I'd like another phone; I already have one.", "role": "director"})
 [OBSERVATION] {"decision": "deny", "rule": "manager_phone_second"}
 [ROUTE] deny (manager_phone_second) -> draft the refusal, naming the rule; do not call flag_for_human_review
-[DRAFT] The request is denied under the rule "manager_phone_second." A second phone is not covered by the policy. You may not request another phone.
-[REFLECTION] Draft corrected: The request is denied under the rule "manager_phone_second." A second phone is not covered by the policy. You may not request another phone.
+[DRAFT] The request is denied under the rule "manager_phone_second." A second phone is not covered by policy.
+[REFLECTION] Draft corrected: Your request for another phone is denied under the rule "manager_phone_second." A second phone is not covered by policy.
 
 FINAL RESPONSE:
-The request is denied under the rule "manager_phone_second." A second phone is not covered by the policy. You may not request another phone.
+Your request for another phone is denied under the rule "manager_phone_second." A second phone is not covered by policy.

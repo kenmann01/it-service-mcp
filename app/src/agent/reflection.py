@@ -65,6 +65,12 @@ def _strip_numbers(text: str, numbers: list[str]) -> str:
     return cleaned.strip()
 
 
+def _usable_revision(revision: str) -> bool:
+    """True when a revision is real prose, not the prompt placeholder echoed."""
+    stripped = revision.strip()
+    return bool(stripped) and not re.search(r"<[^>]+>", stripped)
+
+
 def reflect(draft: str, trace: Trace, llm: Any, request: str = "") -> ReflectionResult:
     """Review the draft against the request and the trace; drop unstated counts."""
     observations = trace.observations() or "(none)"
@@ -77,9 +83,15 @@ def reflect(draft: str, trace: Trace, llm: Any, request: str = "") -> Reflection
     text = (response.content or "").strip()
 
     if text.startswith("CORRECTED:"):
-        final = text.removeprefix("CORRECTED:").strip() or draft
-        confirmed = False
-        summary = f"Draft corrected: {final}"
+        revision = text.removeprefix("CORRECTED:").strip()
+        if _usable_revision(revision):
+            final = revision
+            confirmed = False
+            summary = f"Draft corrected: {final}"
+        else:
+            final = draft
+            confirmed = True
+            summary = "Reflection revision was not usable; draft kept"
     elif text.startswith("CONFIRMED"):
         final = draft
         confirmed = True
@@ -106,7 +118,9 @@ def reflect(draft: str, trace: Trace, llm: Any, request: str = "") -> Reflection
         )
         retry_text = (retry.content or "").strip()
         if retry_text.startswith("CORRECTED:"):
-            final = retry_text.removeprefix("CORRECTED:").strip() or final
+            revision = retry_text.removeprefix("CORRECTED:").strip()
+            if _usable_revision(revision):
+                final = revision
         still = unsupported_numbers(final, request, observations)
         if still:
             final = _strip_numbers(final, still)

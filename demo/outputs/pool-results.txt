@@ -2,29 +2,29 @@ RESULTS (24 cases)
 ========================================================================
 id                                           expected  got       rule                         status     sec
 ------------------------------------------------------------------------------------------------------------
-approve-01-headphones-replacement            approve   approve   headphones_replacement       OK           5
-approve-02-headphones-first                  approve   approve   headphones_first             OK           3
+approve-01-headphones-replacement            approve   approve   headphones_replacement       OK           8
+approve-02-headphones-first                  approve   approve   headphones_first             OK           5
 approve-03-employee-phone-replacement        approve   approve   employee_phone_replacement   OK           5
-approve-04-manager-headphones-replacement    approve   approve   headphones_replacement       OK           4
-approve-05-manager-phone-first               approve   approve   manager_phone_first          OK           4
+approve-04-manager-headphones-replacement    approve   approve   headphones_replacement       OK           5
+approve-05-manager-phone-first               approve   approve   manager_phone_first          OK           5
 approve-06-director-phone-replacement        approve   approve   manager_phone_replacement    OK           5
-deny-01-employee-laptop                      deny      deny      employee_laptop              OK           3
-deny-02-employee-phone-second                deny      deny      employee_phone_second        OK           4
+deny-01-employee-laptop                      deny      deny      employee_laptop              OK           4
+deny-02-employee-phone-second                deny      deny      employee_phone_second        OK           3
 deny-03-headphones-spare                     deny      deny      headphones_second            OK           4
 deny-04-director-phone-second                deny      deny      manager_phone_second         OK           4
-deny-05-manager-laptop                       deny      deny      laptop_not_covered           OK           4
+deny-05-manager-laptop                       deny      deny      laptop_not_covered           OK           5
 deny-06-headphones-extra                     deny      deny      headphones_second            OK           4
 escalate-1-01-unknown-role                   escalate  escalate  subject_unresolved           OK           3
 escalate-1-02-blank-reason                   escalate  escalate  unclear_reason               OK           5
-escalate-1-03-unclear-contradiction          escalate  escalate  unclear_reason               OK           5
+escalate-1-03-unclear-contradiction          escalate  escalate  unclear_reason               OK           6
 escalate-1-04-employee-phone-first           escalate  escalate  employee_phone_first         OK           6
 escalate-1-05-unknown-item                   escalate  escalate  unknown_item                 OK           7
 escalate-1-06-no-signal                      escalate  escalate  unclear_reason               OK           6
 escalate-2-01-manager-laptop-week-overlap    escalate  escalate  laptop_week_overlap          OK           6
-escalate-2-02-manager-laptop-7-days          escalate  escalate  laptop_week_overlap          OK           6
+escalate-2-02-manager-laptop-7-days          escalate  escalate  laptop_week_overlap          OK           5
 escalate-2-03-director-laptop-week-overlap   escalate  escalate  laptop_week_overlap          OK           6
 escalate-2-04-manager-phone-week-overlap     escalate  escalate  unclear_reason               OK           6
-escalate-2-05-headphones-week-overlap        escalate  escalate  unclear_reason               OK           7
+escalate-2-05-headphones-week-overlap        escalate  escalate  unclear_reason               OK           6
 escalate-2-06-director-laptop-handback       escalate  escalate  laptop_week_overlap          OK           6
 ------------------------------------------------------------------------------------------------------------
 matched expectations: 24/24

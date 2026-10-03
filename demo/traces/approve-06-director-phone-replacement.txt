@@ -13,8 +13,8 @@ REQUEST: Hi, I'm Margaret Hamilton (E004). My phone was stolen and I need a repl
 [ACTION] evaluate_request({"employee": "E004", "item_requested": "phone", "reason": "Hi, I'm Margaret Hamilton (E004). My phone was stolen and I need a replacement.", "role": "director"})
 [OBSERVATION] {"decision": "approve", "rule": "manager_phone_replacement"}
 [ROUTE] approve (manager_phone_replacement) -> draft the approval, naming the rule
-[DRAFT] Your request for a phone replacement is approved under the rule "manager_phone_replacement." You are eligible for a replacement phone as per the policy. The new phone will be issued to you shortly. Thank you for reporting the theft.
-[REFLECTION] Draft corrected: Your request for a phone replacement is approved under the rule "manager_phone_replacement." You are eligible for a replacement phone as per the policy. The new phone will be issued to you shortly. Thank you for reporting the theft.
+[DRAFT] Your request for a phone replacement is approved under the rule "manager_phone_replacement." You are eligible for a replacement phone as per the policy. Your current phone is covered under the first replacement policy. Please submit the necessary documentation for the replacement.
+[REFLECTION] Draft corrected: Your request for a phone replacement is approved under the rule "manager_phone_replacement." You are eligible for a replacement phone as per the policy. Your current phone is covered under the first replacement policy. Please submit the necessary documentation for the replacement.
 
 FINAL RESPONSE:
-Your request for a phone replacement is approved under the rule "manager_phone_replacement." You are eligible for a replacement phone as per the policy. The new phone will be issued to you shortly. Thank you for reporting the theft.
+Your request for a phone replacement is approved under the rule "manager_phone_replacement." You are eligible for a replacement phone as per the policy. Your current phone is covered under the first replacement policy. Please submit the necessary documentation for the replacement.

@@ -16,13 +16,13 @@ REQUEST: Hi, I'm Grace Hopper (E001). My headphones broke, so I need a replaceme
 [ACTION] check_request_eligibility({"employee_id": "E001", "item": "headphones"})
 [OBSERVATION] {"eligible": true, "employee_id": "E001", "item": "headphones"}
 
-[THOUGHT] (iteration 4) I need to call evaluate_request.
-[ACTION] evaluate_request({"employee": "E001", "item_requested": "headphones", "reason": "Hi, I'm Grace Hopper (E001). My headphones broke, so I need a replacement.", "role": "employee"})
+[THOUGHT] (iteration 4) The reply is early. Calling evaluate_request.
+[ACTION] evaluate_request({"employee": "Grace Hopper", "item_requested": "headphones", "reason": "Hi, I'm Grace Hopper (E001). My headphones broke, so I need a replacement.", "role": "employee"})
 [OBSERVATION] {"decision": "approve", "rule": "headphones_replacement"}
 [ROUTE] approve (headphones_replacement) -> draft the approval, naming the rule
 
-[DRAFT] Your request for a replacement headphones is approved under the rule "headphones_replacement". The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.
-[REFLECTION] Draft corrected: Your request for a replacement headphones is approved under the rule "headphones_replacement". The policy covers a first pair and a replacement, but not a second or spare pair. You may proceed with the replacement.
+[DRAFT] Your request for replacement headphones is approved under the rule "headphones_replacement". Grace Hopper (E001) is eligible for this replacement. The policy states that a replacement pair of headphones is covered.
+[REFLECTION] Draft corrected: Your request for replacement headphones is approved under the rule "headphones_replacement". Grace Hopper (E001) is eligible for this replacement. The policy states that a replacement pair of headphones is covered.
 
 >>> [approve-01-headphones-replacement] OK: expected=approve got=approve rule=headphones_replacement
 
@@ -43,12 +43,12 @@ REQUEST: Hello, I'm Adele Goldberg (E011). This is my first pair of headphones; 
 [ACTION] check_request_eligibility({"employee_id": "E011", "item": "headphones"})
 [OBSERVATION] {"eligible": true, "employee_id": "E011", "item": "headphones"}
 
-[THOUGHT] (iteration 4) The reply is early. Calling evaluate_request.
-[ACTION] evaluate_request({"employee": "Adele Goldberg", "item_requested": "headphones", "reason": "Hello, I'm Adele Goldberg (E011). This is my first pair of headphones; I do not have one yet.", "role": "employee"})
+[THOUGHT] (iteration 4) I need to call evaluate_request.
+[ACTION] evaluate_request({"employee": "E011", "item_requested": "headphones", "reason": "Hello, I'm Adele Goldberg (E011). This is my first pair of headphones; I do not have one yet.", "role": "employee"})
 [OBSERVATION] {"decision": "approve", "rule": "headphones_first"}
 [ROUTE] approve (headphones_first) -> draft the approval, naming the rule
 
-[DRAFT] The request is approved under the rule "headphones_first" because you are an employee and this is your first pair of headphones. You will receive the requested item.
+[DRAFT] Your request for headphones is approved under the rule "headphones_first". As Adele Goldberg (E011), you are eligible for a first pair of headphones. The IT department will process your request shortly.
 [REFLECTION] Draft confirmed against tool observations
 
 >>> [approve-02-headphones-first] OK: expected=approve got=approve rule=headphones_first
@@ -75,8 +75,8 @@ REQUEST: Hi, I'm Radia Perlman (E005). My company phone stopped working after th
 [OBSERVATION] {"decision": "approve", "rule": "employee_phone_replacement"}
 [ROUTE] approve (employee_phone_replacement) -> draft the approval, naming the rule
 
-[DRAFT] Your request for a replacement phone is approved under the rule "employee_phone_replacement." The policy covers a replacement phone, and you are eligible for this request. Your current phone is already on file, and a replacement is covered. No further action is required.
-[REFLECTION] Draft corrected: Your request for a replacement phone is approved under the rule "employee_phone_replacement." The policy covers a replacement phone, and you are eligible for this request. Your current phone is already on file, and a replacement is covered. No further action is required.
+[DRAFT] Your request for a replacement phone is approved under the rule "employee_phone_replacement." The policy covers a replacement phone, and you are eligible for this item. Your current phone is already on file, and a replacement is allowed. No further action is required.
+[REFLECTION] Draft confirmed against tool observations
 
 >>> [approve-03-employee-phone-replacement] OK: expected=approve got=approve rule=employee_phone_replacement
 
@@ -102,7 +102,7 @@ REQUEST: Hi, I'm Alan Turing (E003). My headphones are worn out; I'd like a repl
 [OBSERVATION] {"decision": "approve", "rule": "headphones_replacement"}
 [ROUTE] approve (headphones_replacement) -> draft the approval, naming the rule
 
-[DRAFT] Your request for a replacement pair of headphones is approved under the rule "headphones_replacement". This is covered under your role as a manager. You will receive the replacement headphones shortly.
+[DRAFT] Your request for a replacement pair of headphones is approved under the rule "headphones_replacement." The policy covers a first pair and a replacement, but not a second or spare pair. You are eligible for this replacement as a manager. Thank you for your request.
 [REFLECTION] Draft confirmed against tool observations
 
 >>> [approve-04-manager-headphones-replacement] OK: expected=approve got=approve rule=headphones_replacement
@@ -125,12 +125,12 @@ REQUEST: Hello, I'm Barbara Liskov (E007). I don't have a company phone yet and 
 [OBSERVATION] {"eligible": true, "employee_id": "E007", "item": "phone"}
 
 [THOUGHT] (iteration 4) I need to call evaluate_request.
-[ACTION] evaluate_request({"employee": "E007", "item_requested": "phone", "reason": "Hello, I'm Barbara Liskov (E007). I don't have a company phone yet and would like my first one.", "role": "manager"})
+[ACTION] evaluate_request({"employee": "Barbara Liskov", "item_requested": "phone", "reason": "Hello, I'm Barbara Liskov (E007). I don't have a company phone yet and would like my first one.", "role": "manager"})
 [OBSERVATION] {"decision": "approve", "rule": "manager_phone_first"}
 [ROUTE] approve (manager_phone_first) -> draft the approval, naming the rule
 
-[DRAFT] Your request for a company phone is approved under the rule "manager_phone_first." As a manager, you are eligible for your first phone. The policy covers this request.
-[REFLECTION] Draft corrected: Your request for a company phone is approved under the rule "manager_phone_first." As a manager, you are eligible for your first phone. The policy covers this request.
+[DRAFT] Your request for a company phone is approved under the rule "manager_phone_first." As a manager, you are eligible for your first phone. The IT department will process your request shortly.
+[REFLECTION] Draft confirmed against tool observations
 
 >>> [approve-05-manager-phone-first] OK: expected=approve got=approve rule=manager_phone_first
 
@@ -156,8 +156,8 @@ REQUEST: Hi, I'm Margaret Hamilton (E004). My phone was stolen and I need a repl
 [OBSERVATION] {"decision": "approve", "rule": "manager_phone_replacement"}
 [ROUTE] approve (manager_phone_replacement) -> draft the approval, naming the rule
 
-[DRAFT] Your request for a phone replacement is approved under the rule "manager_phone_replacement." You are eligible for a replacement phone as per the policy. The new phone will be issued to you shortly. Thank you for reporting the theft.
-[REFLECTION] Draft corrected: Your request for a phone replacement is approved under the rule "manager_phone_replacement." You are eligible for a replacement phone as per the policy. The new phone will be issued to you shortly. Thank you for reporting the theft.
+[DRAFT] Your request for a phone replacement is approved under the rule "manager_phone_replacement." You are eligible for a replacement phone as per the policy. Your current phone is covered under the first replacement policy. Please submit the necessary documentation for the replacement.
+[REFLECTION] Draft corrected: Your request for a phone replacement is approved under the rule "manager_phone_replacement." You are eligible for a replacement phone as per the policy. Your current phone is covered under the first replacement policy. Please submit the necessary documentation for the replacement.
 
 >>> [approve-06-director-phone-replacement] OK: expected=approve got=approve rule=manager_phone_replacement
 
@@ -183,8 +183,8 @@ REQUEST: Hi, I'm Linus Torvalds (E010). I need a laptop for my work.
 [OBSERVATION] {"decision": "deny", "rule": "employee_laptop"}
 [ROUTE] deny (employee_laptop) -> draft the refusal, naming the rule; do not call flag_for_human_review
 
-[DRAFT] The request is denied under the rule "employee_laptop" because laptops are not issued to employees.
-[REFLECTION] Draft corrected: The request is denied under the rule "employee_laptop" because laptops are not issued to employees.
+[DRAFT] The request is denied under the rule "employee_laptop" because laptops are not issued to employees. You may need to explore alternative solutions or contact your supervisor for further assistance.
+[REFLECTION] Draft corrected: The request is denied under the rule "employee_laptop" because laptops are not issued to employees. You may need to explore alternative solutions or contact your supervisor for further assistance.
 
 >>> [deny-01-employee-laptop] OK: expected=deny got=deny rule=employee_laptop
 
@@ -197,7 +197,7 @@ REQUEST: Hello, I'm Katherine Johnson (E002). I already have a work phone but wa
 [ACTION] get_employee_info({"employee_id": "E002"})
 [OBSERVATION] {"employee_id": "E002", "equipment": ["laptop"], "found": true, "name": "Katherine Johnson", "role": "employee", "tenure_years": 8}
 
-[THOUGHT] (iteration 2) I need to call get_policy_limits.
+[THOUGHT] (iteration 2) The reply is early. Calling get_policy_limits.
 [ACTION] get_policy_limits({"role": "employee"})
 [OBSERVATION] {"eligible_for": ["headphones", "phone"], "items": {"headphones": {"eligible": true, "period": "A first pair and a replacement are covered. A second or spare pair is not."}, "laptop": {"eligible": false, "period": "Not issued to employees. A laptop request is denied."}, "phone": {"eligible": true, "period": "A replacement is covered. A first phone or a second phone is not."}}, "known": true, "role": "employee"}
 
@@ -205,13 +205,13 @@ REQUEST: Hello, I'm Katherine Johnson (E002). I already have a work phone but wa
 [ACTION] check_request_eligibility({"employee_id": "E002", "item": "phone"})
 [OBSERVATION] {"eligible": true, "employee_id": "E002", "item": "phone"}
 
-[THOUGHT] (iteration 4) I need to call evaluate_request.
-[ACTION] evaluate_request({"employee": "E002", "item_requested": "phone", "reason": "Hello, I'm Katherine Johnson (E002). I already have a work phone but want an additional one for travel.", "role": "employee"})
+[THOUGHT] (iteration 4) The reply is early. Calling evaluate_request.
+[ACTION] evaluate_request({"employee": "Katherine Johnson", "item_requested": "phone", "reason": "Hello, I'm Katherine Johnson (E002). I already have a work phone but want an additional one for travel.", "role": "employee"})
 [OBSERVATION] {"decision": "deny", "rule": "employee_phone_second"}
 [ROUTE] deny (employee_phone_second) -> draft the refusal, naming the rule; do not call flag_for_human_review
 
-[DRAFT] The request is denied under the rule "employee_phone_second." Additional phones are not eligible for employees who already have a work phone.
-[REFLECTION] Draft corrected: <the revised draft>
+[DRAFT] The request is denied under the rule "employee_phone_second." Additional phones are not covered under the policy. You may need to seek an exception or alternative solution.
+[REFLECTION] Reflection revision was not usable; draft kept
 
 >>> [deny-02-employee-phone-second] OK: expected=deny got=deny rule=employee_phone_second
 
@@ -237,8 +237,8 @@ REQUEST: Hi, I'm Margaret Hamilton (E004). I want a second pair of headphones as
 [OBSERVATION] {"decision": "deny", "rule": "headphones_second"}
 [ROUTE] deny (headphones_second) -> draft the refusal, naming the rule; do not call flag_for_human_review
 
-[DRAFT] The request is denied under the rule "headphones_second" because a second or spare pair of headphones is not covered by the policy. You may need to seek an exception or alternative solution.
-[REFLECTION] Draft corrected: The request is denied under the rule "headphones_second" because a second or spare pair of headphones is not covered by the policy. You may need to seek an exception or alternative solution.
+[DRAFT] The request is denied under the rule "headphones_second" because a second or spare pair of headphones is not covered by the policy. You may need to seek an exception or provide additional justification for this request.
+[REFLECTION] Reflection revision was not usable; draft kept
 
 >>> [deny-03-headphones-spare] OK: expected=deny got=deny rule=headphones_second
 
@@ -260,12 +260,12 @@ REQUEST: Hello, I'm Donald Knuth (E008). I'd like another phone; I already have 
 [OBSERVATION] {"eligible": true, "employee_id": "E008", "item": "phone"}
 
 [THOUGHT] (iteration 4) I need to call evaluate_request.
-[ACTION] evaluate_request({"employee": "E008", "item_requested": "phone", "reason": "Hello, I'm Donald Knuth (E008). I'd like another phone; I already have one.", "role": "director"})
+[ACTION] evaluate_request({"employee": "Donald Knuth", "item_requested": "phone", "reason": "Hello, I'm Donald Knuth (E008). I'd like another phone; I already have one.", "role": "director"})
 [OBSERVATION] {"decision": "deny", "rule": "manager_phone_second"}
 [ROUTE] deny (manager_phone_second) -> draft the refusal, naming the rule; do not call flag_for_human_review
 
-[DRAFT] The request is denied under the rule "manager_phone_second." A second phone is not covered by the policy. You may not request another phone.
-[REFLECTION] Draft corrected: The request is denied under the rule "manager_phone_second." A second phone is not covered by the policy. You may not request another phone.
+[DRAFT] The request is denied under the rule "manager_phone_second." A second phone is not covered by policy.
+[REFLECTION] Draft corrected: Your request for another phone is denied under the rule "manager_phone_second." A second phone is not covered by policy.
 
 >>> [deny-04-director-phone-second] OK: expected=deny got=deny rule=manager_phone_second
 
@@ -291,8 +291,8 @@ REQUEST: Hi, I'm Edsger Dijkstra (E012). My laptop is slow; I need a new one.
 [OBSERVATION] {"decision": "deny", "rule": "laptop_not_covered"}
 [ROUTE] deny (laptop_not_covered) -> draft the refusal, naming the rule; do not call flag_for_human_review
 
-[DRAFT] The request is denied under the rule "laptop_not_covered" because laptops are not covered under your role's policy. You may not request a new laptop.
-[REFLECTION] Draft corrected: The request is denied under the rule "laptop_not_covered" because laptops are not covered under your role's policy. You may not request a new laptop.
+[DRAFT] The request is denied under the rule "laptop_not_covered" because laptops are not issued under your role's policy. You may request a laptop only if you hold both laptops for a week and then return one, which is an exception. Otherwise, all other laptop requests are denied.
+[REFLECTION] Draft corrected: The request is denied under the rule "laptop_not_covered" because laptops are not issued under your role's policy. You may request a laptop only if you hold both laptops for a week and then return one, which is an exception. Otherwise, all other laptop requests are denied.
 
 >>> [deny-05-manager-laptop] OK: expected=deny got=deny rule=laptop_not_covered
 
@@ -318,8 +318,8 @@ REQUEST: Hello, I'm Frances Allen (E013). Could I get an extra pair of headphone
 [OBSERVATION] {"decision": "deny", "rule": "headphones_second"}
 [ROUTE] deny (headphones_second) -> draft the refusal, naming the rule; do not call flag_for_human_review
 
-[DRAFT] The request is denied under the rule "headphones_second" because the policy states that a second or spare pair of headphones is not covered. You already have your desk pair, and an extra pair for home is not eligible.
-[REFLECTION] Draft corrected: <the revised draft>
+[DRAFT] The request is denied under the rule "headphones_second" because a second or spare pair of headphones is not covered by policy. You already have a pair of headphones on file.
+[REFLECTION] Reflection revision was not usable; draft kept
 
 >>> [deny-06-headphones-extra] OK: expected=deny got=deny rule=headphones_second
 
@@ -334,7 +334,7 @@ REQUEST: Hi, I'm Mani. I'd like a vanilla latte, protein goals.
 [OBSERVATION] {"employee_id": "unknown", "reason": "Hi, I'm Mani. I'd like a vanilla latte, protein goals.", "request": "Hi, I'm Mani. I'd like a vanilla latte, protein goals.", "review_id": "R001", "status": "escalated"}
 
 [DRAFT] The request has been escalated for human review. The review ID is R001. Please wait for further instructions.
-[REFLECTION] Draft corrected: The request has been escalated for human review. The review ID is R001. The reason for escalation is: Hi, I'm Mani. I'd like a vanilla latte, protein goals. Please wait for further instructions.
+[REFLECTION] Draft corrected: The request has been escalated for human review. The review ID is R001. The reason for escalation is: "Hi, I'm Mani. I'd like a vanilla latte, protein goals." Please wait for further instructions.
 
 >>> [escalate-1-01-unknown-role] OK: expected=escalate got=escalate rule=subject_unresolved
 
@@ -364,8 +364,8 @@ REQUEST: Hi, I'm Katherine Johnson (E002). I'd like to request headphones.
 [ACTION] flag_for_human_review({"employee_id": "E002", "reason": "unclear_reason", "request": "request headphones"})
 [OBSERVATION] {"employee_id": "E002", "reason": "unclear_reason", "request": "request headphones", "review_id": "R001", "status": "escalated"}
 
-[DRAFT] Katherine Johnson (E002) requested headphones. The request was escalated for human review with the rule "unclear_reason" and review ID R001. The decision will be made by a person after reviewing the request.
-[REFLECTION] Draft corrected: Katherine Johnson (E002) requested headphones. The request has been escalated for human review due to an unclear reason. Review ID R001 has been assigned for further evaluation.
+[DRAFT] Katherine Johnson (E002) requested headphones. The request was escalated for human review with the rule "unclear_reason" and review ID R001. The decision awaits further evaluation by a person.
+[REFLECTION] Draft corrected: Katherine Johnson (E002) requested headphones. The request has been escalated for human review due to an unclear reason. Review ID R001. The decision is pending further evaluation by a person.
 
 >>> [escalate-1-02-blank-reason] OK: expected=escalate got=escalate rule=unclear_reason
 
@@ -386,17 +386,17 @@ REQUEST: Hi, I'm Radia Perlman (E005). I need a second phone since I don't have 
 [ACTION] check_request_eligibility({"employee_id": "E005", "item": "phone"})
 [OBSERVATION] {"eligible": true, "employee_id": "E005", "item": "phone"}
 
-[THOUGHT] (iteration 4) The reply is early. Calling evaluate_request.
-[ACTION] evaluate_request({"employee": "Radia Perlman", "item_requested": "phone", "reason": "Hi, I'm Radia Perlman (E005). I need a second phone since I don't have one right now.", "role": "employee"})
+[THOUGHT] (iteration 4) I need to call evaluate_request.
+[ACTION] evaluate_request({"employee": "E005", "item_requested": "phone", "reason": "Hi, I'm Radia Perlman (E005). I need a second phone since I don't have one right now.", "role": "employee"})
 [OBSERVATION] {"decision": "escalate", "rule": "unclear_reason"}
 [ROUTE] escalate (unclear_reason) -> call flag_for_human_review, then draft the handoff with the review id
 
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E005", "reason": "unclear_reason", "request": "second phone"})
-[OBSERVATION] {"employee_id": "E005", "reason": "unclear_reason", "request": "second phone", "review_id": "R001", "status": "escalated"}
+[ACTION] flag_for_human_review({"employee_id": "E005", "reason": "Request for a second phone is unclear. Policy states a replacement is covered, but a second phone is not.", "request": "Second phone"})
+[OBSERVATION] {"employee_id": "E005", "reason": "Request for a second phone is unclear. Policy states a replacement is covered, but a second phone is not.", "request": "Second phone", "review_id": "R001", "status": "escalated"}
 
-[DRAFT] Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review has been initiated with ID R001. You will be notified once the review is complete.
-[REFLECTION] Draft corrected: Your request for a second phone has been escalated for human review. The reason provided is unclear, and a review has been initiated with ID R001. You will be notified once the review is complete.
+[DRAFT] Your request for a second phone has been escalated for human review. The policy states that a replacement phone is covered, but a second phone is not. Review ID: R001. A decision will be made after further evaluation.
+[REFLECTION] Draft corrected: Your request for a second phone has been escalated for human review. The policy states that a replacement phone is covered, but a second phone is not. Review ID: R001. A decision will be made after further evaluation.
 
 >>> [escalate-1-03-unclear-contradiction] OK: expected=escalate got=escalate rule=unclear_reason
 
@@ -426,8 +426,8 @@ REQUEST: Hello, I'm Tim Berners-Lee (E006). I don't have a company phone yet; co
 [ACTION] flag_for_human_review({"employee_id": "E006", "reason": "escalate due to policy exception for a first phone", "request": "request for a company phone"})
 [OBSERVATION] {"employee_id": "E006", "reason": "escalate due to policy exception for a first phone", "request": "request for a company phone", "review_id": "R001", "status": "escalated"}
 
-[DRAFT] Your request for a company phone has been escalated for human review. The review ID is R001, and the reason is "escalate due to policy exception for a first phone." A decision will be made after a person reviews this request.
-[REFLECTION] Draft corrected: Your request for a company phone has been escalated for human review. The review ID is R001, and the reason is "escalate due to policy exception for a first phone." A decision will be made after a person reviews this request.
+[DRAFT] Your request for a company phone has been escalated for human review. The review ID is R001, and the reason is "escalate due to policy exception for a first phone." A decision will be made after a person reviews this case.
+[REFLECTION] Draft corrected: Your request for a company phone has been escalated for human review. The review ID is R001, and the reason is "escalate due to policy exception for a first phone." A decision will be made after a person reviews this case.
 
 >>> [escalate-1-04-employee-phone-first] OK: expected=escalate got=escalate rule=employee_phone_first
 
@@ -459,8 +459,8 @@ REQUEST: Hi, I'm Grace Hopper (E001). My monitor arm snapped; can I get a new mo
 [ACTION] flag_for_human_review({"employee_id": "E001", "reason": "The item is not covered under the policy limits.", "request": "request for a monitor arm"})
 [OBSERVATION] {"employee_id": "E001", "reason": "The item is not covered under the policy limits.", "request": "request for a monitor arm", "review_id": "R001", "status": "escalated"}
 
-[DRAFT] The request for a monitor arm has been escalated for human review. The item is not covered under the policy limits. A review ID (R001) has been assigned for further action. The request will not be approved until a decision is made. Please follow up with the review process for resolution.
-[REFLECTION] Draft corrected: The request for a monitor arm has been escalated for human review. The item is not covered under the policy limits. A review ID (R001) has been assigned for further action. The request will not be approved until a decision is made. Please follow up with the review process for resolution.
+[DRAFT] The request for a monitor arm has been escalated for human review. The item is not covered under the policy limits. A review ID (R001) has been assigned for further action. Please consult the review ID for updates.
+[REFLECTION] Draft corrected: The request for a monitor arm has been escalated for human review. The item is not covered under the policy limits. A review ID (R001) has been assigned for further action. Please consult the review ID for updates.
 
 >>> [escalate-1-05-unknown-item] OK: expected=escalate got=escalate rule=unknown_item
 
@@ -518,11 +518,11 @@ REQUEST: Hi, I'm Ada Lovelace (E009). I'm replacing my laptop and will keep both
 [ROUTE] escalate (laptop_week_overlap) -> call flag_for_human_review, then draft the handoff with the review id
 
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E009", "reason": "Laptop request overlaps with another laptop in possession, which is an exception.", "request": "Replacing laptop and keeping both for a week"})
-[OBSERVATION] {"employee_id": "E009", "reason": "Laptop request overlaps with another laptop in possession, which is an exception.", "request": "Replacing laptop and keeping both for a week", "review_id": "R001", "status": "escalated"}
+[ACTION] flag_for_human_review({"employee_id": "E009", "reason": "Requesting a second laptop while holding the first for a week is an exception. Policy requires a review.", "request": "Replace laptop and keep both for a week"})
+[OBSERVATION] {"employee_id": "E009", "reason": "Requesting a second laptop while holding the first for a week is an exception. Policy requires a review.", "request": "Replace laptop and keep both for a week", "review_id": "R001", "status": "escalated"}
 
-[DRAFT] Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is "laptop_week_overlap." A review ID, R001, has been assigned for tracking. You will receive further instructions once the review is complete.
-[REFLECTION] Draft corrected: Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is "laptop_week_overlap." A review ID, R001, has been assigned for tracking. The reason for escalation is that your laptop request overlaps with another laptop in possession, which is an exception. You will receive further instructions once the review is complete.
+[DRAFT] Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is "laptop_week_overlap." A review ID (R001) has been assigned, and the request is now under evaluation. You will be notified once a decision is made.
+[REFLECTION] Draft corrected: Your request to replace your laptop and keep both for a week has been escalated for human review. The rule applied is "laptop_week_overlap." A review ID (R001) has been assigned, and the request is now under evaluation. The reason for escalation is that requesting a second laptop while holding the first for a week is an exception, and policy requires a review. You will be notified once a decision is made.
 
 >>> [escalate-2-01-manager-laptop-week-overlap] OK: expected=escalate got=escalate rule=laptop_week_overlap
 
@@ -549,11 +549,11 @@ REQUEST: Hello, I'm Edsger Dijkstra (E012). New laptop please; I'll keep both la
 [ROUTE] escalate (laptop_week_overlap) -> call flag_for_human_review, then draft the handoff with the review id
 
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E012", "reason": "Laptop request overlaps with holding both laptops for a week, which is an exception.", "request": "New laptop request; keeping both laptops for 7 days then returning the old one."})
-[OBSERVATION] {"employee_id": "E012", "reason": "Laptop request overlaps with holding both laptops for a week, which is an exception.", "request": "New laptop request; keeping both laptops for 7 days then returning the old one.", "review_id": "R001", "status": "escalated"}
+[ACTION] flag_for_human_review({"employee_id": "E012", "reason": "Request for a laptop with an exception policy requiring holding both laptops for 7 days and returning the old one.", "request": "New laptop please; I'll keep both laptops for 7 days, then return the old one."})
+[OBSERVATION] {"employee_id": "E012", "reason": "Request for a laptop with an exception policy requiring holding both laptops for 7 days and returning the old one.", "request": "New laptop please; I'll keep both laptops for 7 days, then return the old one.", "review_id": "R001", "status": "escalated"}
 
-[DRAFT] Your request has been escalated for human review. The rule applied is "laptop_week_overlap." You will need to provide further clarification or wait for a decision from the review team. Thank you for your patience.
-[REFLECTION] Draft corrected: Your request has been escalated for human review. The rule applied is "laptop_week_overlap." You will need to provide further clarification or wait for a decision from the review team. Thank you for your patience. Your request involves holding both laptops for a week, which is an exception, and therefore requires review (Review ID: R001).
+[DRAFT] Your request for a new laptop has been escalated for human review. The policy indicates that holding both laptops for 7 days and returning the old one is an exception. Review ID: R001.
+[REFLECTION] Draft corrected: Your request for a new laptop has been escalated for human review. According to the policy, holding both laptops for 7 days and returning the old one is an exception. Review ID: R001.
 
 >>> [escalate-2-02-manager-laptop-7-days] OK: expected=escalate got=escalate rule=laptop_week_overlap
 
@@ -580,11 +580,11 @@ REQUEST: Hi, I'm Margaret Hamilton (E004). Replacing my laptop; I'll keep both f
 [ROUTE] escalate (laptop_week_overlap) -> call flag_for_human_review, then draft the handoff with the review id
 
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E004", "reason": "Requesting a laptop replacement with an overlap period, which is an exception.", "request": "Replacing laptop; keeping both for a week and returning the old one after migration."})
-[OBSERVATION] {"employee_id": "E004", "reason": "Requesting a laptop replacement with an overlap period, which is an exception.", "request": "Replacing laptop; keeping both for a week and returning the old one after migration.", "review_id": "R001", "status": "escalated"}
+[ACTION] flag_for_human_review({"employee_id": "E004", "reason": "Requesting a laptop replacement with an overlap period. The policy allows holding both laptops for a week but requires a human review to confirm the exception.", "request": "Replacing laptop with a week-long overlap and returning the old one after migration"})
+[OBSERVATION] {"employee_id": "E004", "reason": "Requesting a laptop replacement with an overlap period. The policy allows holding both laptops for a week but requires a human review to confirm the exception.", "request": "Replacing laptop with a week-long overlap and returning the old one after migration", "review_id": "R001", "status": "escalated"}
 
-[DRAFT] The request from Margaret Hamilton (E004) has been escalated for human review. The rule applied is "laptop_week_overlap." The review ID is R001, and the status is escalated. A human will need to make the final decision on this request.
-[REFLECTION] Draft corrected: Your laptop replacement request has been escalated for human review. The reason is that you are requesting a laptop replacement with an overlap period, which is an exception. The review ID is R001, and the status is escalated. A human will need to make the final decision on this request.
+[DRAFT] Your request has been escalated for human review. The rule applied is "laptop_week_overlap". A review is underway, and you will be notified once a decision is made. Thank you for your patience.
+[REFLECTION] Draft corrected: Your request has been escalated for human review. The rule applied is "laptop_week_overlap". The reason for escalation is: Requesting a laptop replacement with an overlap period. The policy allows holding both laptops for a week but requires a human review to confirm the exception. Your request has been assigned review ID R001. You will be notified once a decision is made. Thank you for your patience.
 
 >>> [escalate-2-03-director-laptop-week-overlap] OK: expected=escalate got=escalate rule=laptop_week_overlap
 
@@ -611,11 +611,11 @@ REQUEST: Hello, I'm Barbara Liskov (E007). My phone needs replacing; I'd like to
 [ROUTE] escalate (unclear_reason) -> call flag_for_human_review, then draft the handoff with the review id
 
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E007", "reason": "Unclear reason for requesting a second phone. The policy allows for a replacement phone but does not cover a second phone.", "request": "Request to keep both phones for a week before returning the old one."})
-[OBSERVATION] {"employee_id": "E007", "reason": "Unclear reason for requesting a second phone. The policy allows for a replacement phone but does not cover a second phone.", "request": "Request to keep both phones for a week before returning the old one.", "review_id": "R001", "status": "escalated"}
+[ACTION] flag_for_human_review({"employee_id": "E007", "reason": "unclear_reason", "request": "replace phone, keep both phones for a week"})
+[OBSERVATION] {"employee_id": "E007", "reason": "unclear_reason", "request": "replace phone, keep both phones for a week", "review_id": "R001", "status": "escalated"}
 
-[DRAFT] Your request to keep both phones for a week before returning the old one has been escalated for human review. The policy allows for a replacement phone but does not cover a second phone. Review ID: R001.
-[REFLECTION] Draft corrected: Hello Barbara Liskov (E007), your request to keep both phones for a week before returning the old one has been escalated for human review. The policy allows for a replacement phone but does not cover a second phone. Review ID: R001.
+[DRAFT] Your request to replace your phone and keep both phones for a week has been escalated for human review. The reason for escalation is "unclear_reason." A review ID (R001) has been assigned for tracking purposes. You will be contacted once the review is complete.
+[REFLECTION] Draft corrected: Hello Barbara Liskov (E007), your request to replace your phone and keep both phones for a week has been escalated for human review. The reason for escalation is "unclear_reason." A review ID (R001) has been assigned for tracking purposes. You will be contacted once the review is complete.
 
 >>> [escalate-2-04-manager-phone-week-overlap] OK: expected=escalate got=escalate rule=unclear_reason
 
@@ -642,11 +642,11 @@ REQUEST: Hi, I'm Alan Turing (E003). I'd like a replacement for my headphones bu
 [ROUTE] escalate (unclear_reason) -> call flag_for_human_review, then draft the handoff with the review id
 
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E003", "reason": "unclear_reason", "request": "replacement headphones, keep both pairs for a week, return old pair"})
-[OBSERVATION] {"employee_id": "E003", "reason": "unclear_reason", "request": "replacement headphones, keep both pairs for a week, return old pair", "review_id": "R001", "status": "escalated"}
+[ACTION] flag_for_human_review({"employee_id": "E003", "reason": "Unclear reason for requesting a replacement pair of headphones while keeping both pairs for a week. The request needs clarification.", "request": "Replacement headphones, keeping both pairs for a week, then returning the old pair"})
+[OBSERVATION] {"employee_id": "E003", "reason": "Unclear reason for requesting a replacement pair of headphones while keeping both pairs for a week. The request needs clarification.", "request": "Replacement headphones, keeping both pairs for a week, then returning the old pair", "review_id": "R001", "status": "escalated"}
 
-[DRAFT] Your request for replacement headphones, keeping both pairs for a week, and returning the old pair has been escalated for human review. The reason for escalation is unclear. A review ID (R001) has been assigned for tracking purposes. You will be notified once the review is complete.
-[REFLECTION] Draft corrected: Your request for replacement headphones, keeping both pairs for a week, and returning the old pair has been escalated for human review. The reason for escalation is unclear. A review ID (R001) has been assigned for tracking purposes. You will be notified once the review is complete.
+[DRAFT] The request from Alan Turing (E003) for a replacement pair of headphones while keeping both pairs for a week has been escalated for human review. The reason provided is unclear, and the request needs further clarification. The review ID is R001.
+[REFLECTION] Draft corrected: Your request for a replacement pair of headphones while keeping both pairs for a week has been escalated for human review. The reason for requesting a replacement while keeping both pairs is unclear, and further clarification is needed. Review ID: R001.
 
 >>> [escalate-2-05-headphones-week-overlap] OK: expected=escalate got=escalate rule=unclear_reason
 
@@ -673,11 +673,11 @@ REQUEST: Hello, I'm Donald Knuth (E008). I need a laptop refresh; I'll keep both
 [ROUTE] escalate (laptop_week_overlap) -> call flag_for_human_review, then draft the handoff with the review id
 
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E008", "reason": "Request for laptop refresh with overlap period", "request": "Laptop refresh request with overlap period"})
-[OBSERVATION] {"employee_id": "E008", "reason": "Request for laptop refresh with overlap period", "request": "Laptop refresh request with overlap period", "review_id": "R001", "status": "escalated"}
+[ACTION] flag_for_human_review({"employee_id": "E008", "reason": "Request for laptop refresh with overlap period", "request": "Donald Knuth (E008) needs a laptop refresh; he will keep both laptops for a week and then return the old one to IT."})
+[OBSERVATION] {"employee_id": "E008", "reason": "Request for laptop refresh with overlap period", "request": "Donald Knuth (E008) needs a laptop refresh; he will keep both laptops for a week and then return the old one to IT.", "review_id": "R001", "status": "escalated"}
 
-[DRAFT] Your request for a laptop refresh has been escalated for human review. The reason is "Request for laptop refresh with overlap period." A review ID (R001) has been assigned for tracking. You will need to follow up with the IT team for further instructions.
-[REFLECTION] Draft corrected: Hello Donald Knuth (E008), your request for a laptop refresh has been escalated for human review. The reason is "Request for laptop refresh with overlap period." A review ID (R001) has been assigned for tracking. You will need to follow up with the IT team for further instructions.
+[DRAFT] The request from Donald Knuth (E008) has been escalated for human review. The rule applied is "laptop_week_overlap." IT will review the request and make a final decision.
+[REFLECTION] Draft corrected: Hello, Donald Knuth (E008). Your request for a laptop refresh has been escalated for human review due to the "laptop_week_overlap" rule. The review ID is R001, and the reason is: "Request for laptop refresh with overlap period." IT will review the request and make a final decision.
 
 >>> [escalate-2-06-director-laptop-handback] OK: expected=escalate got=escalate rule=laptop_week_overlap
 
@@ -687,29 +687,29 @@ RESULTS (24 cases)
 ========================================================================
 id                                           expected  got       rule                         status     sec
 ------------------------------------------------------------------------------------------------------------
-approve-01-headphones-replacement            approve   approve   headphones_replacement       OK           5
-approve-02-headphones-first                  approve   approve   headphones_first             OK           3
+approve-01-headphones-replacement            approve   approve   headphones_replacement       OK           8
+approve-02-headphones-first                  approve   approve   headphones_first             OK           5
 approve-03-employee-phone-replacement        approve   approve   employee_phone_replacement   OK           5
-approve-04-manager-headphones-replacement    approve   approve   headphones_replacement       OK           4
-approve-05-manager-phone-first               approve   approve   manager_phone_first          OK           4
+approve-04-manager-headphones-replacement    approve   approve   headphones_replacement       OK           5
+approve-05-manager-phone-first               approve   approve   manager_phone_first          OK           5
 approve-06-director-phone-replacement        approve   approve   manager_phone_replacement    OK           5
-deny-01-employee-laptop                      deny      deny      employee_laptop              OK           3
-deny-02-employee-phone-second                deny      deny      employee_phone_second        OK           4
+deny-01-employee-laptop                      deny      deny      employee_laptop              OK           4
+deny-02-employee-phone-second                deny      deny      employee_phone_second        OK           3
 deny-03-headphones-spare                     deny      deny      headphones_second            OK           4
 deny-04-director-phone-second                deny      deny      manager_phone_second         OK           4
-deny-05-manager-laptop                       deny      deny      laptop_not_covered           OK           4
+deny-05-manager-laptop                       deny      deny      laptop_not_covered           OK           5
 deny-06-headphones-extra                     deny      deny      headphones_second            OK           4
 escalate-1-01-unknown-role                   escalate  escalate  subject_unresolved           OK           3
 escalate-1-02-blank-reason                   escalate  escalate  unclear_reason               OK           5
-escalate-1-03-unclear-contradiction          escalate  escalate  unclear_reason               OK           5
+escalate-1-03-unclear-contradiction          escalate  escalate  unclear_reason               OK           6
 escalate-1-04-employee-phone-first           escalate  escalate  employee_phone_first         OK           6
 escalate-1-05-unknown-item                   escalate  escalate  unknown_item                 OK           7
 escalate-1-06-no-signal                      escalate  escalate  unclear_reason               OK           6
 escalate-2-01-manager-laptop-week-overlap    escalate  escalate  laptop_week_overlap          OK           6
-escalate-2-02-manager-laptop-7-days          escalate  escalate  laptop_week_overlap          OK           6
+escalate-2-02-manager-laptop-7-days          escalate  escalate  laptop_week_overlap          OK           5
 escalate-2-03-director-laptop-week-overlap   escalate  escalate  laptop_week_overlap          OK           6
 escalate-2-04-manager-phone-week-overlap     escalate  escalate  unclear_reason               OK           6
-escalate-2-05-headphones-week-overlap        escalate  escalate  unclear_reason               OK           7
+escalate-2-05-headphones-week-overlap        escalate  escalate  unclear_reason               OK           6
 escalate-2-06-director-laptop-handback       escalate  escalate  laptop_week_overlap          OK           6
 ------------------------------------------------------------------------------------------------------------
 matched expectations: 24/24

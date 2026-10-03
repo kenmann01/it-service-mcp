@@ -66,6 +66,13 @@ class ReflectTests(unittest.TestCase):
         result = reflect("The draft.", _trace_with_observation(), llm)
         self.assertEqual(result.final_draft, "The draft.")
 
+    def test_placeholder_echo_keeps_the_original(self) -> None:
+        """A CORRECTED reply that echoes the prompt placeholder keeps the draft."""
+        llm = FakeLLM([LLMResponse(content="CORRECTED: <the revised draft>")])
+        result = reflect("Denied under employee_phone_second.", _trace_with_observation(), llm)
+        self.assertEqual(result.final_draft, "Denied under employee_phone_second.")
+        self.assertNotIn("<", result.final_draft)
+
     def test_unparseable_reply_fails_open(self) -> None:
         """A reply that is neither CONFIRMED nor CORRECTED keeps the draft."""
         llm = FakeLLM([LLMResponse(content="The draft looks fine to me.")])
@@ -97,6 +104,25 @@ class ReflectTests(unittest.TestCase):
         )
         self.assertNotIn("200", result.final_draft)
         self.assertIn("headphones", result.final_draft)
+        self.assertFalse(result.confirmed)
+
+    def test_retry_placeholder_echo_falls_back_to_the_strip(self) -> None:
+        """A retry that echoes the placeholder cannot become the final letter."""
+        invented = "Denied under employee_phone_second; you asked for 2 phones."
+        llm = FakeLLM(
+            [
+                LLMResponse(content=f"CORRECTED: {invented}"),
+                LLMResponse(content="CORRECTED: <the revised draft>"),
+            ]
+        )
+        result = reflect(
+            invented,
+            _trace_with_observation(),
+            llm,
+            request="Hi, I'm Radia Perlman (E005). I want a second phone.",
+        )
+        self.assertNotIn("<", result.final_draft)
+        self.assertNotIn("2", result.final_draft)
         self.assertFalse(result.confirmed)
 
     def test_a_count_written_in_the_request_is_kept(self) -> None:

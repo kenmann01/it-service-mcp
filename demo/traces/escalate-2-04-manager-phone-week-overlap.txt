@@ -14,10 +14,10 @@ REQUEST: Hello, I'm Barbara Liskov (E007). My phone needs replacing; I'd like to
 [OBSERVATION] {"decision": "escalate", "rule": "unclear_reason"}
 [ROUTE] escalate (unclear_reason) -> call flag_for_human_review, then draft the handoff with the review id
 [THOUGHT] (iteration 5) I need to call flag_for_human_review.
-[ACTION] flag_for_human_review({"employee_id": "E007", "reason": "Unclear reason for requesting a second phone. The policy allows for a replacement phone but does not cover a second phone.", "request": "Request to keep both phones for a week before returning the old one."})
-[OBSERVATION] {"employee_id": "E007", "reason": "Unclear reason for requesting a second phone. The policy allows for a replacement phone but does not cover a second phone.", "request": "Request to keep both phones for a week before returning the old one.", "review_id": "R001", "status": "escalated"}
-[DRAFT] Your request to keep both phones for a week before returning the old one has been escalated for human review. The policy allows for a replacement phone but does not cover a second phone. Review ID: R001.
-[REFLECTION] Draft corrected: Hello Barbara Liskov (E007), your request to keep both phones for a week before returning the old one has been escalated for human review. The policy allows for a replacement phone but does not cover a second phone. Review ID: R001.
+[ACTION] flag_for_human_review({"employee_id": "E007", "reason": "unclear_reason", "request": "replace phone, keep both phones for a week"})
+[OBSERVATION] {"employee_id": "E007", "reason": "unclear_reason", "request": "replace phone, keep both phones for a week", "review_id": "R001", "status": "escalated"}
+[DRAFT] Your request to replace your phone and keep both phones for a week has been escalated for human review. The reason for escalation is "unclear_reason." A review ID (R001) has been assigned for tracking purposes. You will be contacted once the review is complete.
+[REFLECTION] Draft corrected: Hello Barbara Liskov (E007), your request to replace your phone and keep both phones for a week has been escalated for human review. The reason for escalation is "unclear_reason." A review ID (R001) has been assigned for tracking purposes. You will be contacted once the review is complete.
 
 FINAL RESPONSE:
-Hello Barbara Liskov (E007), your request to keep both phones for a week before returning the old one has been escalated for human review. The policy allows for a replacement phone but does not cover a second phone. Review ID: R001.
+Hello Barbara Liskov (E007), your request to replace your phone and keep both phones for a week has been escalated for human review. The reason for escalation is "unclear_reason." A review ID (R001) has been assigned for tracking purposes. You will be contacted once the review is complete.
